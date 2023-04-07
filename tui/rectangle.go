@@ -36,3 +36,7 @@ func (self *Rectangle) Clamp(inside Rectangle) {
 		self.y = inside.Bottom() - self.height
 	}
 }
+
+func (self Rectangle) IntoParts() (int, int, int, int) {
+	return self.x, self.y, self.width, self.height
+}

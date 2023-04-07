@@ -187,9 +187,19 @@ func main() {
 		view.SetViewport(tui.NewRectangle(0, 0, 0, 10))
 		view.ScrollTo(10, 3)
 		view.Redraw(scr)
+
 		tui.Box(scr, 10, 5, 10, 5, tui.Colors.BoxOutline)
 		tui.FillRect(scr, 11, 6, 8, 3, ' ', tcell.StyleDefault)
 		tui.Text(scr, 11, 6, "12345678", tcell.StyleDefault)
+
+		menu := tui.NewMenu()
+		menu.SetConstraints(6, 2)
+		menu.SetItems([]string{
+			"the", "quick", "brown", "fox", "jumps", "over", "the", "lazy", "dog",
+		})
+		menu.SetViewport(tui.NewRectangle(14, 7, 100, 50))
+		menu.Redraw(scr)
+
 		scr.Show()
 		waitForAnyKey(scr)
 	}

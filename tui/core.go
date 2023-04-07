@@ -21,15 +21,14 @@ var (
 		{false, 90, 97, 8},
 		{true, 100, 107, 8},
 	}
+	// FIXME: this is ugly and feels out of place here
 	Colors = struct {
 		Comment,
 		LineNumber,
 		CurrentLineNumber,
 		BoxOutline,
-		MenuBackground,
-		MenuText tcell.Style
+		Menu tcell.Style
 	}{
-		tcell.StyleDefault,
 		tcell.StyleDefault,
 		tcell.StyleDefault,
 		tcell.StyleDefault,
@@ -37,6 +36,12 @@ var (
 		tcell.StyleDefault,
 	}
 )
+
+type PaletteSpec struct {
+	isBackground  bool
+	first, last   int
+	paletteOffset int
+}
 
 type BoxStyle struct {
 	vertical    rune
@@ -50,7 +55,7 @@ type BoxStyle struct {
 func GetBoxStyle(description string) BoxStyle {
 	switch description {
 	default:
-		log.Printf("unknown box style '%s', using rounded", description)
+		log.Printf("unknown box style ‘%s’, using rounded", description)
 		fallthrough
 	case "rounded":
 		return BoxStyle{'│', '─', '╭', '╮', '╰', '╯'}
@@ -63,12 +68,6 @@ func GetBoxStyle(description string) BoxStyle {
 	case "ascii":
 		return BoxStyle{'|', '-', '+', '+', '+', '+'}
 	}
-}
-
-type PaletteSpec struct {
-	isBackground  bool
-	first, last   int
-	paletteOffset int
 }
 
 type Cell struct {
@@ -94,8 +93,7 @@ func Init(cfg *Config) tcell.Screen {
 	Colors.LineNumber = Ansi2Style(cfg.Colors.LineNumber)
 	Colors.CurrentLineNumber = Ansi2Style(cfg.Colors.CurrentLineNumber)
 	Colors.BoxOutline = Ansi2Style(cfg.Colors.BoxOutline)
-	Colors.MenuBackground = Ansi2Style(cfg.Colors.MenuBackground)
-	Colors.MenuText = Ansi2Style(cfg.Colors.MenuText)
+	Colors.Menu = Ansi2Style(cfg.Colors.Menu)
 	return scr
 }
 

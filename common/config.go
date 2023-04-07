@@ -24,8 +24,7 @@ type CfgColors struct {
 	LineNumber        string `toml:"line-number"`
 	CurrentLineNumber string `toml:"current-line-number"`
 	BoxOutline        string `toml:"box-outline"`
-	MenuBackground    string `toml:"menu-background"`
-	MenuText          string `toml:"menu-text"`
+	Menu              string `toml:"menu"`
 }
 
 type Config struct {
@@ -49,8 +48,7 @@ func DefaultConfig() Config {
 			LineNumber:        "\x1b[38;5;243m",
 			CurrentLineNumber: "\x1b[38;5;251m",
 			BoxOutline:        "\x1b[38;5;213m",
-			MenuBackground:    "\x1b[48;5;61m",
-			MenuText:          "\x1b[48;5;232m",
+			Menu:              "\x1b[48;5;61;38;5;232m",
 		},
 	}
 }
