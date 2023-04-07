@@ -7,30 +7,50 @@ import (
 	"github.com/pelletier/go-toml/v2"
 )
 
-type General struct {
+const (
+	commentColorDefault = "\000DEFAULT"
+)
+
+type CfgGeneral struct {
 	OnlyIfSpaceAfter  bool   `toml:"only-if-space-after"`
 	HighlightCommand  string `toml:"highlight-command"`
 	DimCode           bool   `toml:"dim-code"`
-	CommentColor      string `toml:"comment-color"`
 	BoxStyle          string `toml:"box-style"`
 	ItalicToUnderline bool   `toml:"italic-to-underline"`
+}
+
+type CfgColors struct {
+	Comment           string `toml:"comment-color"`
+	LineNumber        string `toml:"line-number"`
+	CurrentLineNumber string `toml:"current-line-number"`
+	BoxOutline        string `toml:"box-outline"`
+	MenuBackground    string `toml:"menu-background"`
+	MenuText          string `toml:"menu-text"`
 }
 
 type Config struct {
 	Extensions map[string][]string
 	Styles     map[string]CommentStyle
-	General    General
+	General    CfgGeneral
+	Colors     CfgColors
 }
 
 func DefaultConfig() Config {
 	return Config{
-		General: General{
+		General: CfgGeneral{
 			OnlyIfSpaceAfter:  true,
 			HighlightCommand:  "",
 			DimCode:           true,
-			CommentColor:      "",
 			BoxStyle:          "rounded",
 			ItalicToUnderline: false,
+		},
+		Colors: CfgColors{
+			Comment:           commentColorDefault,
+			LineNumber:        "\x1b[38;5;243m",
+			CurrentLineNumber: "\x1b[38;5;251m",
+			BoxOutline:        "\x1b[38;5;213m",
+			MenuBackground:    "\x1b[48;5;61m",
+			MenuText:          "\x1b[48;5;232m",
 		},
 	}
 }
@@ -48,8 +68,12 @@ func LoadConfig(pathname string) Config {
 			Fatal("invalid comment style: %s: %s", name, err)
 		}
 	}
-	if len(cfg.General.HighlightCommand) == 0 {
-		cfg.General.CommentColor = "\x1b[1;32m"
+	if cfg.Colors.Comment == commentColorDefault {
+		if len(cfg.General.HighlightCommand) == 0 {
+			cfg.Colors.Comment = "\x1b[1;32m"
+		} else {
+			cfg.Colors.Comment = ""
+		}
 	}
 	return cfg
 }

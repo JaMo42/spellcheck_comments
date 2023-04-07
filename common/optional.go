@@ -24,7 +24,7 @@ func (self *Optional[T]) IsSome() bool {
 // assertSome panics if the optional does not contain a value.
 func (self *Optional[T]) assertSome() {
 	if !self.isSome {
-		panic("tried to unwrap `None` value")
+		panic("tried to unwrap empty optional")
 	}
 }
 

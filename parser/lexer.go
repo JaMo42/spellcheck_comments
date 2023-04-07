@@ -2,6 +2,7 @@ package parser
 
 import (
 	"fmt"
+	"strings"
 	"unicode"
 
 	. "github.com/JaMo42/spellcheck_comments/common"
@@ -12,10 +13,9 @@ const (
 	lexStateInCode int = iota
 	lexStateInEscape
 	lexStateInComment
-	lexStateEOF
 )
 
-// lexTransition is a state pair used for switching.
+// lexTransition is a state info pair used for switching.
 type lexTransition struct{ from, to int }
 
 // TokenKindType is the underlying type for the values in TokenKind.
@@ -62,7 +62,11 @@ type Token struct {
 // String returns a string to display the token, use Text() to get the tokens
 // text.
 func (self *Token) String() string {
-	return fmt.Sprintf("%s(%s)", LexerTokenKindName(self.kind), self.text)
+	return fmt.Sprintf(
+		"%s(%s)",
+		LexerTokenKindName(self.kind),
+		strings.ReplaceAll(self.text, "\x1b", "\\e"),
+	)
 }
 
 func (self Token) WithColumn(column int) Token {
@@ -127,7 +131,7 @@ func NewLexer(source string, commentStyle CommentStyle) Lexer {
 	dfa := buildDfa(commentStyle)
 	runes := []rune(source)
 	// XXX: the loop in getNextTokens needs a newline at the end or we crash
-	if runes[len(runes)-1] != '\n' {
+	if *util.Back(runes) != '\n' {
 		runes = append(runes, '\n')
 	}
 	return Lexer{

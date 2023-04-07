@@ -9,10 +9,12 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/gdamore/tcell/v2"
 	"github.com/kballard/go-shellquote"
 
 	. "github.com/JaMo42/spellcheck_comments/common"
 	"github.com/JaMo42/spellcheck_comments/parser"
+	"github.com/JaMo42/spellcheck_comments/tui"
 	"github.com/JaMo42/spellcheck_comments/util"
 )
 
@@ -24,19 +26,6 @@ const (
 var (
 	globs []string
 )
-
-type SourceLocation struct {
-	Line, Column int
-}
-
-type Line struct {
-	CommentText string
-	Location    SourceLocation
-}
-
-type SourceFile []Line
-
-type Project map[string]SourceFile
 
 func UNUSED(x ...interface{}) {}
 
@@ -111,8 +100,7 @@ func getFiles(args []string) []string {
 }
 
 func careAboutFile(filename string, cfg *Config) bool {
-	split := strings.Split(filename, ".")
-	ext := split[len(split)-1]
+	ext := fileExtension(filename)
 	for _, extensions := range cfg.Extensions {
 		if util.Contains(extensions, ext) {
 			return true
@@ -136,8 +124,18 @@ func highlight(filename string, cfg *Config) string {
 }
 
 func fileExtension(filename string) string {
-	split := strings.Split(filename, ".")
-	return split[len(split)-1]
+	return *util.Back(strings.Split(filename, "."))
+}
+
+func waitForAnyKey(scr tcell.Screen) {
+	for {
+		ev := scr.PollEvent()
+		switch ev := ev.(type) {
+		case *tcell.EventKey:
+			UNUSED(ev)
+			return
+		}
+	}
 }
 
 func main() {
@@ -152,37 +150,47 @@ func main() {
 		},
 	)
 	UNUSED(files)
-	//files = []string{"source_files/timer.hpp"}
-	files = []string{"source_files/hello_world.c"}
+	files = []string{"source_files/timer.hpp"}
+	//files = []string{"source_files/hello_world.c"}
+
+	scr := tui.Init(&cfg)
+	defer tui.Quit(scr)
 
 	for _, filename := range files {
 		fmt.Println(filename)
 		content := highlight(filename, &cfg)
 		style := cfg.GetStyle(fileExtension(filename))
 		lexer := parser.NewLexer(content, style)
-		color := "\x1b[0m"
+		tb := tui.NewTextBuffer()
+	loop:
 		for {
 			tok := lexer.Next()
-			fmt.Printf("%s('%s')\n", parser.LexerTokenKindName(tok.Kind()), strings.ReplaceAll(tok.Text(), "\x1b", "\\e"))
-			if tok.Kind() == parser.TokenKind.EOF {
-				break
+			switch tok.Kind() {
+			case parser.TokenKind.Code:
+				fallthrough
+			case parser.TokenKind.CommentWord:
+				tb.AddSlice(tok.Text())
+			case parser.TokenKind.Style:
+				tb.SetStyle(tui.Ansi2Style(tok.Text()))
+			case parser.TokenKind.Newline:
+				tb.Newline()
+			case parser.TokenKind.EOF:
+				break loop
 			}
-			continue
-			if tok.Kind() == parser.TokenKind.EOF {
-				break
-			} else if tok.Kind() == parser.TokenKind.Newline {
-				fmt.Printf("\x1b[0;2m\\n%s\n", color)
-			} else {
-				if tok.Kind() == parser.TokenKind.Style {
-					color = tok.Text()
-					//fmt.Print("\x1b[0;2mc\x1b[22m")
-				}
-				if tok.Kind() == parser.TokenKind.CommentWord {
-					fmt.Printf("\x1b[0;2m{\x1b[m%s%s\x1b[0;2m}\x1b[m%s", color, tok.Text(), color)
-				} else {
-					fmt.Print(tok.Text())
-				}
-			}
+			//fmt.Printf("%s\n", tok.String())
+			//if tok.Kind() == parser.TokenKind.EOF {
+			//	break
+			//}
 		}
+		view := tui.NewTextBufferView()
+		view.SetTextBuffer(&tb)
+		view.SetViewport(tui.NewRectangle(0, 0, 0, 10))
+		view.ScrollTo(10, 3)
+		view.Redraw(scr)
+		tui.Box(scr, 10, 5, 10, 5, tui.Colors.BoxOutline)
+		tui.FillRect(scr, 11, 6, 8, 3, ' ', tcell.StyleDefault)
+		tui.Text(scr, 11, 6, "12345678", tcell.StyleDefault)
+		scr.Show()
+		waitForAnyKey(scr)
 	}
 }

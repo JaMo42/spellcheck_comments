@@ -50,7 +50,7 @@ func TestNewlines(t *testing.T) {
 		newToken(TokenKind.Newline),
 		newToken(TokenKind.Code, "Line 3"),
 		newToken(TokenKind.Newline),
-		newToken(TokenKind.CommentBegin, ""),
+		newToken(TokenKind.CommentBegin),
 		newToken(TokenKind.Code, "/* "),
 		newToken(TokenKind.CommentWord, "Line"),
 		newToken(TokenKind.Code, " 4"),

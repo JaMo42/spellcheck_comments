@@ -56,3 +56,8 @@ func Xxs[T any](arr []T) (T, []T) {
 	x, xs := arr[0], arr[1:]
 	return x, xs
 }
+
+// Back returns a pointer to the last element in the slice.
+func Back[T any](arr []T) *T {
+	return &arr[len(arr)-1]
+}

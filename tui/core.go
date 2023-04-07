@@ -1,3 +1,4 @@
+// Package tui contains routines for creating the TUI.
 package tui
 
 import (
@@ -9,6 +10,32 @@ import (
 
 	. "github.com/JaMo42/spellcheck_comments/common"
 	"github.com/JaMo42/spellcheck_comments/util"
+)
+
+var (
+	boxStyle          BoxStyle
+	italicAsUnderline bool
+	palettes          = []PaletteSpec{
+		{false, 30, 37, 0},
+		{true, 40, 47, 0},
+		{false, 90, 97, 8},
+		{true, 100, 107, 8},
+	}
+	Colors = struct {
+		Comment,
+		LineNumber,
+		CurrentLineNumber,
+		BoxOutline,
+		MenuBackground,
+		MenuText tcell.Style
+	}{
+		tcell.StyleDefault,
+		tcell.StyleDefault,
+		tcell.StyleDefault,
+		tcell.StyleDefault,
+		tcell.StyleDefault,
+		tcell.StyleDefault,
+	}
 )
 
 type BoxStyle struct {
@@ -26,15 +53,15 @@ func GetBoxStyle(description string) BoxStyle {
 		log.Printf("unknown box style '%s', using rounded", description)
 		fallthrough
 	case "rounded":
-		return BoxStyle{'─', '│', '╭', '╮', '╰', '╯'}
+		return BoxStyle{'│', '─', '╭', '╮', '╰', '╯'}
 	case "sharp":
-		return BoxStyle{'─', '│', '┌', '┐', '└', '┘'}
+		return BoxStyle{'│', '─', '┌', '┐', '└', '┘'}
 	case "heavysharp":
-		return BoxStyle{'━', '┃', '┏', '┓', '┗', '┛'}
+		return BoxStyle{'┃', '━', '┏', '┓', '┗', '┛'}
 	case "double":
-		return BoxStyle{'═', '║', '╔', '╗', '╚', '╝'}
+		return BoxStyle{'║', '═', '╔', '╗', '╚', '╝'}
 	case "ascii":
-		return BoxStyle{'-', '|', '+', '+', '+', '+'}
+		return BoxStyle{'|', '-', '+', '+', '+', '+'}
 	}
 }
 
@@ -44,16 +71,14 @@ type PaletteSpec struct {
 	paletteOffset int
 }
 
-var (
-	boxStyle          BoxStyle
-	italicAsUnderline bool
-	palettes          = []PaletteSpec{
-		{false, 30, 37, 0},
-		{true, 40, 47, 0},
-		{false, 90, 97, 8},
-		{true, 100, 107, 8},
-	}
-)
+type Cell struct {
+	char  rune
+	style tcell.Style
+}
+
+func NewCell(char rune, style tcell.Style) Cell {
+	return Cell{char, style}
+}
 
 func Init(cfg *Config) tcell.Screen {
 	boxStyle = GetBoxStyle(cfg.General.BoxStyle)
@@ -65,6 +90,12 @@ func Init(cfg *Config) tcell.Screen {
 	if err := scr.Init(); err != nil {
 		Fatal("could not initialize screen: %s", err)
 	}
+	Colors.Comment = Ansi2Style(cfg.Colors.Comment)
+	Colors.LineNumber = Ansi2Style(cfg.Colors.LineNumber)
+	Colors.CurrentLineNumber = Ansi2Style(cfg.Colors.CurrentLineNumber)
+	Colors.BoxOutline = Ansi2Style(cfg.Colors.BoxOutline)
+	Colors.MenuBackground = Ansi2Style(cfg.Colors.MenuBackground)
+	Colors.MenuText = Ansi2Style(cfg.Colors.MenuText)
 	return scr
 }
 
@@ -86,7 +117,7 @@ func HLine(scr tcell.Screen, x, y int, width int, char rune, style tcell.Style) 
 }
 
 func VLine(scr tcell.Screen, x, y int, height int, char rune, style tcell.Style) {
-	for row := x; row < y+height; row += 1 {
+	for row := y; row < y+height; row += 1 {
 		scr.SetContent(x, row, char, nil, style)
 	}
 }
@@ -104,6 +135,12 @@ func Box(scr tcell.Screen, x, y, width, height int, style tcell.Style) {
 	VLine(scr, right, y+1, height-2, boxStyle.vertical, style)
 }
 
+func FillRect(scr tcell.Screen, x, y, width, height int, char rune, style tcell.Style) {
+	for row := y; row < y+height; row += 1 {
+		HLine(scr, x, row, width, char, style)
+	}
+}
+
 func getColor(tok int, tokens []int, style tcell.Style) (tcell.Style, []int) {
 	isBackground := false
 	color := tcell.ColorDefault
@@ -117,11 +154,11 @@ func getColor(tok int, tokens []int, style tcell.Style) (tcell.Style, []int) {
 	if tok == 38 || tok == 48 {
 		isBackground = tok == 48
 		tok, tokens = util.Xxs(tokens)
-		if tok == 2 {
+		if tok == 5 {
 			var index int
 			index, tokens = util.Xxs(tokens)
 			color = tcell.PaletteColor(index)
-		} else if tok == 5 {
+		} else if tok == 2 {
 			var red, green, blue int
 			red, tokens = util.Xxs(tokens)
 			green, tokens = util.Xxs(tokens)
@@ -144,6 +181,9 @@ done:
 
 // Ansi2Style converts a SGR ansi escape sequence to a tcell Style.
 func Ansi2Style(sequence string) (style tcell.Style) {
+	if len(sequence) == 0 {
+		return tcell.StyleDefault
+	}
 	// Out lexer only understands sequences ending with 'm' so we don't need
 	// to verify it's a SGR sequence.
 	tokens := util.Map(
