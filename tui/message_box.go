@@ -8,12 +8,6 @@ import (
 	"github.com/mattn/go-runewidth"
 )
 
-var (
-	MbYes   = "Yes"
-	MbNo    = "No"
-	MbYesNo = []string{MbYes, MbNo}
-)
-
 type mbButton struct {
 	label     string
 	highlight int
@@ -34,11 +28,7 @@ type messageBox struct {
 	buttonsEnd   int
 }
 
-func MessageBox(scr tcell.Screen, text string, buttons []string) string {
-	selected := 0
-	if &buttons[0] == &MbYesNo[0] {
-		selected = 1
-	}
+func MessageBox(scr tcell.Screen, text string, buttons []string, initialSelection int) string {
 	keys := map[rune]int{}
 	btns := make([]mbButton, len(buttons))
 	var highlight int
@@ -60,7 +50,7 @@ func MessageBox(scr tcell.Screen, text string, buttons []string) string {
 		scr:          scr,
 		text:         text,
 		buttons:      btns,
-		selected:     selected,
+		selected:     initialSelection,
 		showSelected: false,
 		keys:         keys,
 	}
@@ -190,4 +180,10 @@ func (self *messageBox) Select(idx int) {
 	self.selected = idx
 	self.DrawButton(old)
 	self.DrawButton(idx)
+}
+
+func AskYesNo(scr tcell.Screen, text string) bool {
+	yes := "Yes"
+	no := "No"
+	return MessageBox(scr, text, []string{yes, no}, 1) == yes
 }

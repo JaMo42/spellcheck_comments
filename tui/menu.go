@@ -58,12 +58,16 @@ func NewMenu(preferredLocation, rows, cols int) Menu {
 		false,
 		Colors.Menu,
 	)
-	columns.showSelection = true
+	columns.AlwaysShowSelection = true
 	columns.AddGroup(rows)
 	return Menu{
 		list:              columns,
 		preferredLocation: preferredLocation,
 	}
+}
+
+func (self *Menu) TranslateAction(f func(int, int) any) {
+	self.list.TranslateAction(f)
 }
 
 func (self *Menu) SetItems(items []string) {
@@ -86,7 +90,8 @@ func (self *Menu) Redraw(scr tcell.Screen) {
 // SetPosition sets the position on the menu next to a word. x and y are position
 // of the word and wordWidth is the width of that word. The menu will be
 // appropiately position inside the given rectangle to be next to that word.
-func (self *Menu) SetPosition(x, y, wordWidth int, inside Rectangle) {
+// If updatePos is false the list views position is not updated.
+func (self *Menu) SetPosition(x, y, wordWidth int, inside Rectangle, updatePos bool) {
 	if self.preferredLocation == MenuLocation.Below {
 		// Align it so the word and the suggestions are on the same column
 		self.viewport.x = x - 3
@@ -103,6 +108,10 @@ func (self *Menu) SetPosition(x, y, wordWidth int, inside Rectangle) {
 		self.isBelow = true
 	}
 	self.viewport.Clamp(inside)
+	//if updatePos {
+	//	self.list.SetPosition(self.viewport.x, self.viewport.y)
+	//}
+	self.list.SetPosition(self.viewport.x, self.viewport.y)
 }
 
 // Attemps to evade rect while staying inside inside. The resulting viewport
@@ -123,9 +132,11 @@ func (self *Menu) Evade(rect, inside Rectangle) Optional[int] {
 			// rect was not successfully evaded, need to go above
 			self.viewport.y = 1
 			self.viewport.x = oldX
-			//self.viewport.Clamp(inside)
+			self.viewport.Clamp(inside)
+			//self.list.SetPosition(self.viewport.x, self.viewport.y)
 			return Some(self.viewport.height + 1)
 		}
+		//self.list.SetPosition(self.viewport.x, self.viewport.y)
 	}
 	return None[int]()
 }
@@ -148,4 +159,12 @@ func (self *Menu) Right() {
 
 func (self *Menu) GetSelected() any {
 	return self.list.GetSelected()
+}
+
+func (self *Menu) Motion(x, y int) bool {
+	return self.list.Motion(x, y)
+}
+
+func (self *Menu) Click(x, y int, button tcell.ButtonMask) Optional[any] {
+	return self.list.Click(x, y, button)
 }

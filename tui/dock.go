@@ -39,6 +39,10 @@ func NewDock(vAlign, hAlign, columnCount, dynRows, permRows int) Dock {
 	}
 }
 
+func (self *Dock) TranslateAction(f func(int, int) any) {
+	self.list.TranslateAction(f)
+}
+
 func (self *Dock) SetPermanentItems(items []KeyAction) {
 	// XXX: we just KeyAction for the type here as that our only usecase and
 	// there is no need to be more generic.
@@ -63,6 +67,8 @@ func (self *Dock) SetViewport(viewport Rectangle) {
 	myHeight := self.list.Height() + 2
 	xInside, width := alignAxis(viewport.width, myWidth, self.hAlign)
 	yInside, height := alignAxis(viewport.height, myHeight, self.vAlign)
+	lastX := self.viewport.x
+	lastY := self.viewport.y
 	self.viewport = NewRectangle(
 		viewport.x+xInside,
 		viewport.y+yInside,
@@ -70,6 +76,9 @@ func (self *Dock) SetViewport(viewport Rectangle) {
 		height,
 	)
 	self.list.columnWidth = Some((width - 2) / self.list.columns)
+	if self.viewport.x != lastX || self.viewport.y != lastY {
+		self.list.SetPosition(self.viewport.x+1, self.viewport.y+1)
+	}
 }
 
 func (self *Dock) Rect() Rectangle {
@@ -80,4 +89,12 @@ func (self *Dock) Redraw(scr tcell.Screen) {
 	x, y, width, height := self.viewport.Parts()
 	Box(scr, x, y, width, height, Colors.BoxOutline)
 	self.list.Redraw(scr, x+1, y+1)
+}
+
+func (self *Dock) Motion(x, y int) bool {
+	return self.list.Motion(x, y)
+}
+
+func (self *Dock) Click(x, y int, button tcell.ButtonMask) Optional[any] {
+	return self.list.Click(x, y, button)
 }

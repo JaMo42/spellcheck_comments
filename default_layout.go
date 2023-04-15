@@ -14,6 +14,7 @@ type DefaultLayout struct {
 	pmenu         tui.Menu
 	menuContainer tui.MenuContainer
 	globalKeys    tui.Dock
+	viewport      tui.Rectangle
 }
 
 func (self *DefaultLayout) SetSource(sf *SourceFile) {
@@ -45,8 +46,7 @@ func (self *DefaultLayout) ArrowReceiver() tui.ArrowReceiver {
 }
 
 func (self *DefaultLayout) MouseReceivers() []tui.MouseReceiver {
-	//return []tui.MouseReceiver{&self.pmenu, &self.globalKeys}
-	return []tui.MouseReceiver{}
+	return []tui.MouseReceiver{&self.pmenu, &self.globalKeys}
 }
 
 func (self *DefaultLayout) Create() {
@@ -55,20 +55,33 @@ func (self *DefaultLayout) Create() {
 	self.menuContainer = tui.NewMenuContainer()
 	self.menuContainer.SetMenu(&self.pmenu)
 	self.globalKeys = tui.NewDock(tui.Alignment.End, tui.Alignment.End, 1, 0, 4)
-	self.globalKeys.SetPermanentItems(GlobalControls())
+	globalControls := GlobalControls()
+	self.globalKeys.SetPermanentItems(globalControls)
+	self.pmenu.TranslateAction(func(_, item int) any {
+		return ActionSelectSuggestion{item}
+	})
+	self.globalKeys.TranslateAction(func(_, item int) any {
+		return globalControls[item].Action()
+	})
 }
 
 func (self *DefaultLayout) Layout(width, height int) {
-	screen := tui.NewRectangle(0, 0, width, height)
-	self.source.SetViewport(screen)
-	self.menuContainer.SetViewport(screen)
-	self.globalKeys.SetViewport(screen)
+	self.viewport = tui.NewRectangle(0, 0, width, height)
+	self.source.SetViewport(self.viewport)
+	self.menuContainer.SetViewport(self.viewport)
+	self.globalKeys.SetViewport(self.viewport)
 	self.menuContainer.SetEvade(Some(self.globalKeys.Rect()))
 }
 
-func (self *DefaultLayout) Update(scr tcell.Screen) {
-	self.source.Redraw(scr)
-	self.globalKeys.Redraw(scr)
-	self.pmenu.Redraw(scr)
-	self.source.UpdateSlice(scr, self.highlight)
+func (self *DefaultLayout) Update(scr tcell.Screen, widget any) {
+	if widget == nil {
+		self.source.Redraw(scr)
+		self.globalKeys.Redraw(scr)
+		self.pmenu.Redraw(scr)
+		self.source.UpdateSlice(scr, self.highlight)
+	} else if widget == &self.pmenu {
+		self.pmenu.Redraw(scr)
+	} else if widget == &self.globalKeys {
+		self.globalKeys.Redraw(scr)
+	}
 }

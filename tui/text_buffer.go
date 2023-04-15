@@ -32,10 +32,18 @@ type Line struct {
 	width  int
 }
 
-func (self *Line) AddSlice(text string, style tcell.Style) {
+func (self *Line) addSlice(text string, style tcell.Style) {
 	width := runewidth.StringWidth(text)
 	self.slices = append(self.slices, TextSlice{text, style, self.width, width})
 	self.width += width
+}
+
+func (self *Line) computeOffsets() {
+	offset := 0
+	for i := range self.slices {
+		self.slices[i].offset = offset
+		offset += self.slices[i].width
+	}
 }
 
 type SliceIndex struct {
@@ -71,7 +79,7 @@ func (self *TextBuffer) SetStyle(style tcell.Style) {
 func (self *TextBuffer) AddSlice(slice string) SliceIndex {
 	line := util.Back(self.lines)
 	sliceIdx := len(line.slices)
-	line.AddSlice(slice, self.style)
+	line.addSlice(slice, self.style)
 	self.capacity += len(slice)
 	return SliceIndex{len(self.lines) - 1, sliceIdx}
 }
@@ -87,15 +95,17 @@ func (self *TextBuffer) GetSlice(idx SliceIndex) *TextSlice {
 func (self *TextBuffer) SetSliceText(idx SliceIndex, text string) {
 	slice := self.GetSlice(idx)
 	self.capacity -= len(slice.text)
-	slice.text = text
 	self.capacity += len(text)
+	slice.text = text
+	slice.width = runewidth.StringWidth(text)
+	self.lines[idx.line].computeOffsets()
 }
 
 func (self *TextBuffer) PrintLineAt(scr tcell.Screen, line, x, y int) {
 	col := x
 	for _, slice := range self.lines[line].slices {
 		Text(scr, col, y, slice.text, slice.style)
-		col += len(slice.text)
+		col += slice.width
 	}
 }
 

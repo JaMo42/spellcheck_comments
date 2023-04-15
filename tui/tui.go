@@ -15,13 +15,13 @@ type ArrowReceiver interface {
 
 type MouseReceiver interface {
 	Motion(x, y int) bool
-	Click(button tcell.ButtonMask) Optional[any]
+	Click(x, y int, button tcell.ButtonMask) Optional[any]
 }
 
 type Layout interface {
 	Create()
 	Layout(width, height int)
-	Update(scr tcell.Screen)
+	Update(scr tcell.Screen, widget any)
 }
 
 type KeyAction interface {
@@ -55,8 +55,8 @@ func (self *Tui) Layout() {
 }
 
 // Update calls the layouts Update method and shows the screen.
-func (self *Tui) Update() {
-	self.layout.Update(self.scr)
+func (self *Tui) Update(widget any) {
+	self.layout.Update(self.scr, widget)
 	self.scr.Show()
 }
 
@@ -97,7 +97,7 @@ func (self *Tui) RunUntilAction() any {
 			action = self.mouseEvent(ev)
 		case *tcell.EventResize:
 			self.Layout()
-			self.Update()
+			self.Update(nil)
 		}
 		if action.IsSome() {
 			return action.Unwrap()
@@ -125,24 +125,25 @@ func (self *Tui) keyEvent(ev *tcell.EventKey) Optional[any] {
 		}
 	case tcell.KeyCtrlC:
 		return Some(self.interrupt)
+	default:
+		return None[any]()
 	}
+	self.Update(self.arrow)
 	return None[any]()
 }
 
 func (self *Tui) mouseEvent(ev *tcell.EventMouse) Optional[any] {
 	if ev.Buttons() == 0 {
-		update := false
 		for _, receiver := range self.mouse {
 			if receiver.Motion(ev.Position()) {
-				update = true
+				self.Update(receiver)
 			}
-		}
-		if update {
-			self.Update()
 		}
 	} else {
 		for _, receiver := range self.mouse {
-			if maybeAction := receiver.Click(ev.Buttons()); maybeAction.IsSome() {
+			b := ev.Buttons()
+			x, y := ev.Position()
+			if maybeAction := receiver.Click(x, y, b); maybeAction.IsSome() {
 				return Some(maybeAction.Unwrap())
 			}
 		}

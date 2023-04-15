@@ -46,6 +46,10 @@ func NewSpellChecker(scr tcell.Screen, speller aspell.Speller, cfg *Config) Spel
 	for _, binding := range GlobalControls() {
 		ui.SetKey(binding.Key(), binding.Action())
 	}
+	for i := 0; i < 10; i++ {
+		key := rune('0' + (i+1)%10)
+		ui.SetKey(key, ActionSelectSuggestion{i})
+	}
 	return SpellChecker{
 		scr:     scr,
 		ui:      ui,
@@ -66,23 +70,25 @@ func (self *SpellChecker) CheckFile(sf *SourceFile) {
 	self.layout.SetSource(sf)
 	for maybeWord := sf.NextWord(); maybeWord.IsSome(); maybeWord = sf.NextWord() {
 		word := maybeWord.Get()
-		self.layout.Show(word.Index)
 		suggestions := self.speller.Suggest(word.Original)
 		if len(suggestions) > 20 {
 			suggestions = suggestions[:20]
 		}
 		self.layout.SetSuggestions(suggestions)
-		self.ui.Layout()
+		self.layout.Show(word.Index)
 	repeatKey:
 		self.scr.Clear()
-		self.ui.Update()
+		self.ui.Update(nil)
 		switch action := self.ui.RunUntilAction().(type) {
+		case ActionSelectSuggestion:
+			sf.Text().SetSliceText(word.Index, suggestions[action.index])
 		case ActionAbort:
-			choice := tui.MessageBox(self.scr, "Are you sure you want to abort?", tui.MbYesNo)
-			if choice == tui.MbYes {
+			if tui.AskYesNo(self.scr, "Are you sure you want to abort?") {
 				return
 			}
 			goto repeatKey
+		case ActionExit:
+			return
 		case ActionIgnore:
 			if action.all {
 				self.AddIgnored(word.Original)

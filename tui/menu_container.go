@@ -33,6 +33,12 @@ func (self *MenuContainer) SetEvade(evade Optional[Rectangle]) {
 }
 
 func (self *MenuContainer) SetMenuPosition(x, y, wordWidth int) {
-	self.menu.SetPosition(self.viewport.x+x, self.viewport.y+y, wordWidth, self.viewport)
+	self.menu.SetPosition(
+		self.viewport.x+x,
+		self.viewport.y+y,
+		wordWidth,
+		self.viewport,
+		!self.evade.IsSome(),
+	)
 	self.doEvade()
 }
