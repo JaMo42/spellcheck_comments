@@ -195,7 +195,7 @@ func (self *Lexer) createMarker(kind TokenKindType) Token {
 }
 
 func isWordChar(char rune) bool {
-	return unicode.IsLetter(char) || char == '-' || char == '\''
+	return unicode.IsLetter(char) || char == '-' || char == '\'' || char == '_'
 }
 
 // processInComment processes one character inside a comment, adding tokens
@@ -209,7 +209,7 @@ func (self *Lexer) processInComment(char rune) {
 		self.createToken(TokenKind.Code).Then(addToken)
 		self.ignoreWord = true
 	} else if isWordChar(char) {
-		self.wordLength += 1
+		self.wordLength++
 	} else if inWord {
 		if self.ignoreWord {
 			self.ignoreWord = false
@@ -219,7 +219,7 @@ func (self *Lexer) processInComment(char rune) {
 			self.createToken(TokenKind.Code).Then(addToken)
 			self.used = self.wordLength
 			self.createToken(TokenKind.CommentWord).Then(addToken)
-			self.used += 1
+			self.used++
 		}
 		self.wordLength = 0
 	} else {
@@ -242,8 +242,8 @@ func (self *Lexer) getNextTokens() {
 	}
 	for {
 		char := self.source[self.used]
-		self.used += 1
-		self.column += 1
+		self.used++
+		self.column++
 		if self.state == lexStateInComment {
 			self.processInComment(char)
 		}
@@ -300,7 +300,7 @@ func (self *Lexer) getNextTokens() {
 				self.createToken(TokenKind.Code).Then(addToken)
 				self.drop(1)
 				addToken(self.createMarker(TokenKind.Newline))
-				self.line += 1
+				self.line++
 				self.column = 0
 			}
 			break

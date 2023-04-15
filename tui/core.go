@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/gdamore/tcell/v2"
+	"github.com/mattn/go-runewidth"
 
 	. "github.com/JaMo42/spellcheck_comments/common"
 	"github.com/JaMo42/spellcheck_comments/util"
@@ -35,6 +36,7 @@ var (
 		tcell.StyleDefault,
 		tcell.StyleDefault,
 	}
+	Alignment = struct{ Begin, Center, End, Fill int }{0, 1, 2, 3}
 )
 
 type PaletteSpec struct {
@@ -89,6 +91,9 @@ func Init(cfg *Config) tcell.Screen {
 	if err := scr.Init(); err != nil {
 		Fatal("could not initialize screen: %s", err)
 	}
+	if cfg.General.Mouse {
+		scr.EnableMouse(tcell.MouseMotionEvents)
+	}
 	Colors.Comment = Ansi2Style(cfg.Colors.Comment)
 	Colors.LineNumber = Ansi2Style(cfg.Colors.LineNumber)
 	Colors.CurrentLineNumber = Ansi2Style(cfg.Colors.CurrentLineNumber)
@@ -104,18 +109,18 @@ func Quit(scr tcell.Screen) {
 func Text(scr tcell.Screen, x, y int, text string, style tcell.Style) {
 	for _, char := range text {
 		scr.SetContent(x, y, char, nil, style)
-		x += 1
+		x += runewidth.RuneWidth(char)
 	}
 }
 
 func HLine(scr tcell.Screen, x, y int, width int, char rune, style tcell.Style) {
-	for col := x; col < x+width; col += 1 {
+	for col := x; col < x+width; col++ {
 		scr.SetContent(col, y, char, nil, style)
 	}
 }
 
 func VLine(scr tcell.Screen, x, y int, height int, char rune, style tcell.Style) {
-	for row := y; row < y+height; row += 1 {
+	for row := y; row < y+height; row++ {
 		scr.SetContent(x, row, char, nil, style)
 	}
 }
@@ -134,7 +139,7 @@ func Box(scr tcell.Screen, x, y, width, height int, style tcell.Style) {
 }
 
 func FillRect(scr tcell.Screen, x, y, width, height int, char rune, style tcell.Style) {
-	for row := y; row < y+height; row += 1 {
+	for row := y; row < y+height; row++ {
 		HLine(scr, x, row, width, char, style)
 	}
 }
@@ -240,4 +245,41 @@ func Ansi2Style(sequence string) (style tcell.Style) {
 		}
 	}
 	return style
+}
+
+func alignAxis(avail, use, alignment int) (int, int) {
+	switch alignment {
+	case Alignment.Begin:
+		return 0, use
+	case Alignment.Center:
+		return (avail - use) / 2, use
+	case Alignment.End:
+		return avail - use, use
+	case Alignment.Fill:
+		return 0, avail
+	}
+	panic("unreachable")
+}
+
+// TranslateControl gets the key and rune from the given event, translating
+// upper and lowercase HJKL to arrow keys. Additionally converts space to enter.
+func TranslateControls(ev *tcell.EventKey) (tcell.Key, rune) {
+	if ev.Key() == tcell.KeyRune {
+		switch ev.Rune() {
+		case 'k', 'K':
+			return tcell.KeyUp, 0
+		case 'j', 'J':
+			return tcell.KeyDown, 0
+		case 'h', 'H':
+			return tcell.KeyLeft, 0
+		case 'l', 'L':
+			return tcell.KeyRight, 0
+		case ' ':
+			return tcell.KeyEnter, 0
+		default:
+			return tcell.KeyRune, ev.Rune()
+		}
+	} else {
+		return ev.Key(), ev.Rune()
+	}
 }

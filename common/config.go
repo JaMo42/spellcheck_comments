@@ -12,11 +12,13 @@ const (
 )
 
 type CfgGeneral struct {
-	OnlyIfSpaceAfter  bool   `toml:"only-if-space-after"`
 	HighlightCommand  string `toml:"highlight-command"`
 	DimCode           bool   `toml:"dim-code"`
 	BoxStyle          string `toml:"box-style"`
 	ItalicToUnderline bool   `toml:"italic-to-underline"`
+	Language          string `toml:"language"`
+	Layout            string `toml:"layout"`
+	Mouse             bool   `toml:"mouse"`
 }
 
 type CfgColors struct {
@@ -37,11 +39,13 @@ type Config struct {
 func DefaultConfig() Config {
 	return Config{
 		General: CfgGeneral{
-			OnlyIfSpaceAfter:  true,
 			HighlightCommand:  "",
 			DimCode:           true,
 			BoxStyle:          "rounded",
 			ItalicToUnderline: false,
+			Language:          "en_US",
+			Layout:            "default",
+			Mouse:             true,
 		},
 		Colors: CfgColors{
 			Comment:           commentColorDefault,
@@ -85,4 +89,10 @@ func (self *Config) GetStyle(extension string) CommentStyle {
 		}
 	}
 	panic("unreachable")
+}
+
+func (self *Config) Aspell() map[string]string {
+	return map[string]string{
+		"lang": self.General.Language,
+	}
 }

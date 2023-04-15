@@ -12,6 +12,7 @@ require (
 	github.com/mattn/go-runewidth v0.0.14 // indirect
 	github.com/pelletier/go-toml/v2 v2.0.7 // indirect
 	github.com/rivo/uniseg v0.4.3 // indirect
+	github.com/trustmaster/go-aspell v0.0.0-20200701131845-c2b1f55bec8f
 	golang.org/x/exp v0.0.0-20230321023759-10a507213a29
 	golang.org/x/sys v0.5.0 // indirect
 	golang.org/x/term v0.5.0 // indirect

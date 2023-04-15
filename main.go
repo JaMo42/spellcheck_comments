@@ -11,6 +11,7 @@ import (
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/kballard/go-shellquote"
+	"github.com/trustmaster/go-aspell"
 
 	. "github.com/JaMo42/spellcheck_comments/common"
 	"github.com/JaMo42/spellcheck_comments/parser"
@@ -127,14 +128,45 @@ func fileExtension(filename string) string {
 	return *util.Back(strings.Split(filename, "."))
 }
 
-func waitForAnyKey(scr tcell.Screen) {
+func waitForAnyKey(scr tcell.Screen) bool {
 	for {
 		ev := scr.PollEvent()
 		switch ev := ev.(type) {
 		case *tcell.EventKey:
-			UNUSED(ev)
-			return
+			return ev.Key() == tcell.KeyCtrlC
 		}
+	}
+}
+
+type GlobalControl struct {
+	key    rune
+	label  string
+	action any
+}
+
+func (self *GlobalControl) Key() rune {
+	return self.key
+}
+
+func (self *GlobalControl) Label() string {
+	return self.label
+}
+
+func (self *GlobalControl) Action() any {
+	return self.action
+}
+
+func GlobalControls() []tui.KeyAction {
+	x := func(k rune, l string, a any) *GlobalControl {
+		control := new(GlobalControl)
+		*control = GlobalControl{k, l, a}
+		return control
+	}
+	return []tui.KeyAction{
+		x('i', "Ignore", ActionIgnore{false}),
+		x('I', "Ignore all", ActionIgnore{true}),
+		x('x', "Exit", ActionExit{}),
+		x('b', "Abort", ActionAbort{}),
 	}
 }
 
@@ -142,7 +174,6 @@ func main() {
 	log.SetFlags(0)
 	args := parseArgs()
 	cfg := LoadConfig("config.toml")
-	// unknown extensions aren't an error so we silently filter here
 	files := util.Filter(
 		getFiles(args),
 		func(filename string) bool {
@@ -153,54 +184,25 @@ func main() {
 	files = []string{"source_files/timer.hpp"}
 	//files = []string{"source_files/hello_world.c"}
 
+	speller, err := aspell.NewSpeller(cfg.Aspell())
+	if err != nil {
+		Fatal("could not create speller: %s", err.Error())
+	}
+	defer speller.Delete()
+
 	scr := tui.Init(&cfg)
 	defer tui.Quit(scr)
+
+	checker := NewSpellChecker(scr, speller, &cfg)
 
 	for _, filename := range files {
 		fmt.Println(filename)
 		content := highlight(filename, &cfg)
 		style := cfg.GetStyle(fileExtension(filename))
-		lexer := parser.NewLexer(content, style)
-		tb := tui.NewTextBuffer()
-	loop:
-		for {
-			tok := lexer.Next()
-			switch tok.Kind() {
-			case parser.TokenKind.Code:
-				fallthrough
-			case parser.TokenKind.CommentWord:
-				tb.AddSlice(tok.Text())
-			case parser.TokenKind.Style:
-				tb.SetStyle(tui.Ansi2Style(tok.Text()))
-			case parser.TokenKind.Newline:
-				tb.Newline()
-			case parser.TokenKind.EOF:
-				break loop
-			}
-			//fmt.Printf("%s\n", tok.String())
-			//if tok.Kind() == parser.TokenKind.EOF {
-			//	break
-			//}
+		sf := parser.Parse(filename, content, style, speller, cfg.General.DimCode)
+		if sf.Ok() {
+			continue
 		}
-		view := tui.NewTextBufferView()
-		view.SetTextBuffer(&tb)
-		view.SetViewport(tui.NewRectangle(0, 0, 0, 10))
-		view.ScrollTo(10, 3)
-		view.Redraw(scr)
-
-		tui.Box(scr, 10, 5, 10, 5, tui.Colors.BoxOutline)
-		tui.FillRect(scr, 11, 6, 8, 3, ' ', tcell.StyleDefault)
-		tui.Text(scr, 11, 6, "12345678", tcell.StyleDefault)
-
-		menu := tui.NewMenu()
-		menu.SetConstraints(6, 2)
-		menu.SetItems([]string{
-			"the", "quick", "brown", "fox", "jumps", "over", "the", "lazy", "dog",
-		})
-		menu.SetViewport(tui.NewRectangle(14, 7, 100, 50))
-		menu.Redraw(scr)
-
-		scr.Show()
-		waitForAnyKey(scr)
+		checker.CheckFile(&sf)
 	}
 }

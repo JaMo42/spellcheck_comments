@@ -2,7 +2,9 @@
 // package as that is imported without namespacing.
 package util
 
-import "golang.org/x/exp/constraints"
+import (
+	"github.com/mattn/go-runewidth"
+)
 
 // Contains returns trues if arr contains value.
 func Contains[T comparable](arr []T, value T) bool {
@@ -43,12 +45,33 @@ func Map[T any, U any](arr []T, f func(T) U) []U {
 }
 
 // Sum returns the sum of the elements in arr.
-func Sum[T constraints.Integer](arr []T) T {
-	var sum T
+func Sum(arr []int) int {
+	sum := 0
 	for _, x := range arr {
 		sum += x
 	}
 	return sum
+}
+
+// Xxs pops the first value from the given slice.
+func Xxs[T any](arr []T) (T, []T) {
+	x, xs := arr[0], arr[1:]
+	return x, xs
+}
+
+// Back returns a pointer to the last element in the slice.
+func Back[T any](arr []T) *T {
+	return &arr[len(arr)-1]
+}
+
+// MaxElem returns the maximum element of an integer slice.
+func MaxElem(arr []int) (max int) {
+	for _, i := range arr {
+		if i > max {
+			max = i
+		}
+	}
+	return max
 }
 
 // String2Int creates an integer with the utf-8 representation of the string.
@@ -62,15 +85,10 @@ func String2Int(s string) uint64 {
 	return asInt
 }
 
-// Xxs pops the first value from the given slice.
-func Xxs[T any](arr []T) (T, []T) {
-	x, xs := arr[0], arr[1:]
-	return x, xs
-}
-
-// Back returns a pointer to the last element in the slice.
-func Back[T any](arr []T) *T {
-	return &arr[len(arr)-1]
+// StrLen simply wraps a call to len(s). Unlike len this can be used as a
+// parameter to other functions.
+func StrLen(s string) int {
+	return len(s)
 }
 
 // CeilDiv performs ceiling integer division of a / b.
@@ -92,4 +110,18 @@ func Max(a, b int) int {
 		return a
 	}
 	return b
+}
+
+// Clamp clamps the value in the given inclusive range.
+func Clamp(x, lo, hi int) int {
+	return Min(Max(x, lo), hi)
+}
+
+// FixPrintfPadding returns the correct padding amount to pad the given word
+// by the wanted number of cells, handling codepoints with multiple bytes and
+// fullwidth characters.
+func FixPrintfPadding(str string, padding int) int {
+	byteCount := len(str)
+	width := runewidth.StringWidth(str)
+	return padding - byteCount + width
 }

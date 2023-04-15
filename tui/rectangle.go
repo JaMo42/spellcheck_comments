@@ -37,6 +37,15 @@ func (self *Rectangle) Clamp(inside Rectangle) {
 	}
 }
 
-func (self Rectangle) IntoParts() (int, int, int, int) {
+func (self *Rectangle) Parts() (int, int, int, int) {
 	return self.x, self.y, self.width, self.height
+}
+
+func (self *Rectangle) Contains(x, y int) bool {
+	return x >= self.x && y >= self.y && x < self.Right() && y < self.Bottom()
+}
+
+func (self *Rectangle) Overlaps(other Rectangle) bool {
+	return (self.x <= other.Right() && self.Right() > other.x) &&
+		(self.y <= other.Bottom() && self.Bottom() > other.y)
 }

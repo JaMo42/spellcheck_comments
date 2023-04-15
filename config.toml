@@ -13,6 +13,5 @@ c = ["c", "cc", "cpp", "cxx", "h", "hh", "hpp", "hxx", "rs", "go"]
 python = ["py"]
 
 [general]
-only-if-space-after = true
 highlight-command = "source-highlight -f esc --style-file=esc.style -i %FILE%"
 box-style = "heavysharp"
