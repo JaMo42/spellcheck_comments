@@ -222,6 +222,21 @@ func parseFiles(names []string, cfg *Config, speller aspell.Speller, out chan sf
 	close(out)
 }
 
+func configPath() string {
+	configHome := os.Getenv("XDG_CONFIG_HOME")
+	if len(configHome) == 0 {
+		home := os.Getenv("HOME")
+		if len(home) == 0 {
+			home = os.Getenv("Home")
+		}
+		if len(home) == 0 {
+			return ""
+		}
+		configHome = fmt.Sprintf("%s/.config", home)
+	}
+	return filepath.Join(configHome, "spellcheck_comments.toml")
+}
+
 func main() {
 	log.SetFlags(0)
 	options, args := parseArgs()
@@ -232,11 +247,18 @@ func main() {
 		BackupRestoreAll()
 		return
 	}
-	cfg := LoadConfig("config.toml")
+	var cfg Config
+	if path := configPath(); len(path) != 0 {
+		cfg = LoadConfig(path)
+	} else {
+		cfg = DefaultConfig()
+	}
+
 	files := getFiles(args, fileFilter(&cfg, &options))
 	if len(files) == 0 {
 		return
 	}
+
 	speller, err := aspell.NewSpeller(cfg.Aspell())
 	if err != nil {
 		Fatal("could not create speller: %s", err.Error())
