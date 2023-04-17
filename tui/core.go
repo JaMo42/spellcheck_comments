@@ -106,11 +106,33 @@ func Quit(scr tcell.Screen) {
 	scr.Fini()
 }
 
-func Text(scr tcell.Screen, x, y int, text string, style tcell.Style) {
+func Text(scr tcell.Screen, x, y int, text string, style tcell.Style) int {
 	for _, char := range text {
 		scr.SetContent(x, y, char, nil, style)
 		x += runewidth.RuneWidth(char)
 	}
+	return x
+}
+
+// TextWithHighlight prints the given strings, highlighting one character.
+func TextWithHighlight(
+	scr tcell.Screen,
+	x, y int,
+	text string,
+	highlight int,
+	normalStyle, highlightStyle tcell.Style,
+) int {
+	var style tcell.Style
+	for i, char := range text {
+		if i == highlight {
+			style = highlightStyle
+		} else {
+			style = normalStyle
+		}
+		scr.SetContent(x, y, char, nil, style)
+		x += runewidth.RuneWidth(char)
+	}
+	return x
 }
 
 func HLine(scr tcell.Screen, x, y int, width int, char rune, style tcell.Style) {

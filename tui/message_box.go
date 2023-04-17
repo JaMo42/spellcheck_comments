@@ -152,27 +152,26 @@ func (self *messageBox) Redraw() {
 func (self *messageBox) DrawButton(idx int) {
 	button := &self.buttons[idx]
 	x := button.x
-	var nStyle, hStyle tcell.Style
+	var normalStyle, highlightStyle tcell.Style
 	if idx == self.selected && self.showSelected {
-		nStyle = tcell.StyleDefault.Reverse(true)
-		hStyle = nStyle.Background(tcell.ColorRed)
+		normalStyle = tcell.StyleDefault.Reverse(true)
+		highlightStyle = normalStyle.Background(tcell.ColorRed)
 	} else {
-		nStyle = tcell.StyleDefault
-		hStyle = nStyle.Foreground(tcell.ColorRed)
+		normalStyle = tcell.StyleDefault
+		highlightStyle = normalStyle.Foreground(tcell.ColorRed)
 	}
-	self.scr.SetContent(x, self.buttonsY, ' ', nil, nStyle)
+	self.scr.SetContent(x, self.buttonsY, ' ', nil, normalStyle)
 	x++
-	for i, c := range button.label {
-		var style tcell.Style
-		if i == button.highlight {
-			style = hStyle
-		} else {
-			style = nStyle
-		}
-		self.scr.SetContent(x, self.buttonsY, c, nil, style)
-		x += runewidth.RuneWidth(c)
-	}
-	self.scr.SetContent(x, self.buttonsY, ' ', nil, nStyle)
+	x = TextWithHighlight(
+		self.scr,
+		x,
+		self.buttonsY,
+		button.label,
+		button.highlight,
+		normalStyle,
+		highlightStyle,
+	)
+	self.scr.SetContent(x, self.buttonsY, ' ', nil, normalStyle)
 }
 
 func (self *messageBox) Select(idx int) {

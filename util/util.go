@@ -125,3 +125,17 @@ func FixPrintfPadding(str string, padding int) int {
 	width := runewidth.StringWidth(str)
 	return padding - byteCount + width
 }
+
+func Deduplicate[T comparable](arr []T) []T {
+	set := make(map[T]bool)
+	for _, x := range arr {
+		set[x] = true
+	}
+	filtered := make([]T, len(set))
+	i := 0
+	for x := range set {
+		filtered[i] = x
+		i++
+	}
+	return filtered
+}

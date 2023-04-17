@@ -22,14 +22,18 @@ func (self *FileContext) Change(index tui.SliceIndex, text string) {
 }
 
 func (self *FileContext) IsChanged() bool {
-	return len(self.changes) == 0
+	return len(self.changes) != 0
 }
 
 func (self *FileContext) AddToBackup(b *Backup) {
 	b.SetFile(self.sf.Name())
 	tb := self.sf.Text()
+	originals := make(map[tui.SliceIndex]string)
+	for _, w := range self.sf.Words() {
+		originals[w.Index] = w.Original
+	}
 	for _, c := range self.changes {
-		b.AddLine(c.Line(), tb)
+		b.AddLine(c.Line(), tb, originals)
 	}
 }
 

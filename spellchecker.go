@@ -36,7 +36,9 @@ type SpellChecker struct {
 	files      []FileContext
 }
 
-func NewSpellChecker(scr tcell.Screen, speller aspell.Speller, cfg *Config) SpellChecker {
+func NewSpellChecker(
+	scr tcell.Screen, speller aspell.Speller, cfg *Config, options *Options,
+) SpellChecker {
 	var layout Layout
 	switch cfg.General.Layout {
 	case "aspell":
@@ -61,13 +63,18 @@ func NewSpellChecker(scr tcell.Screen, speller aspell.Speller, cfg *Config) Spel
 		layout:   layout,
 		speller:  speller,
 		ignore:   make(map[string]bool),
-		doBackup: cfg.General.Backup,
+		doBackup: cfg.General.Backup || options.backup,
 	}
 }
 
 func (self *SpellChecker) CheckFile(sf SourceFile) bool {
 	self.layout.SetSource(&sf)
 	file := NewFileContext(sf)
+	defer func() {
+		if file.IsChanged() {
+			self.files = append(self.files, file)
+		}
+	}()
 	for maybeWord := sf.NextWord(); maybeWord.IsSome(); maybeWord = sf.NextWord() {
 		word := maybeWord.Get()
 		if self.ignore[word.Original] {
@@ -105,16 +112,14 @@ func (self *SpellChecker) CheckFile(sf SourceFile) bool {
 			goto repeatKey
 
 		case ActionExit:
-			self.files = append(self.files, file)
 			return true
 		}
 	}
-	self.files = append(self.files, file)
 	return false
 }
 
 func (self *SpellChecker) Finish() {
-	if self.discardAll {
+	if self.discardAll || !self.changed {
 		return
 	}
 	backup := Backup{}

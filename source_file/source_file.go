@@ -46,6 +46,10 @@ func (self *SourceFile) Ok() bool {
 	return len(self.words) == 0
 }
 
+func (self *SourceFile) Words() []Word {
+	return self.words
+}
+
 func (self *SourceFile) NextWord() Optional[Word] {
 	if self.nextWord == len(self.words) {
 		return None[Word]()

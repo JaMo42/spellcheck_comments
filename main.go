@@ -25,62 +25,81 @@ const (
 	appVersion = "0.1.0"
 )
 
-var (
-	globs []string
-)
+type Options struct {
+	backup         bool
+	applyBackup    bool
+	applyBackupAll bool
+	globs          []string
+}
 
-func parseArgs() []string {
+func parseArgs() (Options, []string) {
 	InvocationName = os.Args[0]
-	globsString := "*"
+	globsString := ""
 	showVersion := false
+	var options Options
 	flag.StringVar(
-		&globsString, "globs", "*.*",
+		&globsString, "globs", "",
 		"comma separated list of globs for file names in directories",
 	)
 	flag.BoolVar(
 		&showVersion, "version", false,
 		"show version information",
 	)
+	flag.BoolVar(
+		&options.backup, "with-backup", false,
+		"generate a backup even if disable in the config",
+	)
+	flag.BoolVar(
+		&options.applyBackup, "apply-backup", false,
+		"apply the backup, asking for each file",
+	)
+	var applyBackupAlias bool
+	flag.BoolVar(&applyBackupAlias, "b", false, "alias for -apply-backup")
+	flag.BoolVar(
+		&options.applyBackupAll, "apply-backup-all", false,
+		"apply the backup for all files",
+	)
+	var applyBackupAllAlias bool
+	flag.BoolVar(&applyBackupAllAlias, "B", false, "alias for -apply-backup-all")
 	flag.Parse()
 	if showVersion {
 		fmt.Printf("%s %s\n", appName, appVersion)
 		os.Exit(0)
 	}
-	globs = util.Filter(
-		strings.Split(globsString, ","),
-		func(pattern string) bool {
-			_, err := filepath.Match(pattern, "")
-			if err != nil {
-				log.Printf("%s: discarding invalid glob: %s\n", InvocationName, pattern)
-			}
-			return err == nil
-		},
-	)
-	return flag.Args()
+	options.applyBackup = options.applyBackup || applyBackupAlias
+	options.applyBackupAll = options.applyBackupAll || applyBackupAllAlias
+	if len(globsString) != 0 {
+		options.globs = util.Filter(
+			strings.Split(globsString, ","),
+			func(pattern string) bool {
+				_, err := filepath.Match(pattern, "")
+				if err != nil {
+					log.Printf("%s: discarding invalid glob: %s\n", InvocationName, pattern)
+				}
+				return err == nil
+			},
+		)
+	}
+	return options, flag.Args()
 }
 
-func discover(files []string, dir string) []string {
+func discover(files []string, dir string, filter func(string, bool) bool) []string {
 	dirContent, _ := os.ReadDir(dir)
 	for _, file := range dirContent {
 		name := file.Name()
 		if file.IsDir() {
-			files = discover(files, fmt.Sprintf("%s/%s", dir, name))
-		} else {
-			for _, glob := range globs {
-				if match, _ := filepath.Match(glob, name); match {
-					files = append(files, fmt.Sprintf("%s/%s", dir, name))
-					break
-				}
-			}
+			files = discover(files, fmt.Sprintf("%s/%s", dir, name), filter)
+		} else if filter(name, false) {
+			files = append(files, fmt.Sprintf("%s/%s", dir, name))
 		}
 	}
 	return files
 }
 
-func getFiles(args []string) []string {
-	files := make([]string, len(args))
+func getFiles(args []string, filter func(string, bool) bool) []string {
+	files := []string{}
 	if len(args) == 0 {
-		return discover(files, ".")
+		return discover(files, ".", filter)
 	} else {
 		for _, arg := range args {
 			stat, err := os.Stat(arg)
@@ -89,8 +108,8 @@ func getFiles(args []string) []string {
 				continue
 			}
 			if stat.IsDir() {
-				files = discover(files, arg)
-			} else {
+				files = discover(files, arg, filter)
+			} else if filter(arg, true) {
 				files = append(files, arg)
 			}
 		}
@@ -98,14 +117,37 @@ func getFiles(args []string) []string {
 	return files
 }
 
-func careAboutFile(filename string, cfg *Config) bool {
-	ext := fileExtension(filename)
-	for _, extensions := range cfg.Extensions {
-		if util.Contains(extensions, ext) {
-			return true
+func fileFilter(cfg *Config, options *Options) func(filename string, direct bool) bool {
+	extensionFilter := func(filename string, _ bool) bool {
+		ext := fileExtension(filename)
+		for _, extensions := range cfg.Extensions {
+			if util.Contains(extensions, ext) {
+				return true
+			}
 		}
+		return false
 	}
-	return false
+	if len(options.globs) == 0 {
+		return extensionFilter
+	}
+	return func(filename string, direct bool) bool {
+		if !extensionFilter(filename, direct) {
+			return false
+		}
+		for _, glob := range options.globs {
+			if match, _ := filepath.Match(glob, filename); match {
+				return true
+			}
+		}
+		if direct {
+			log.Printf(
+				"%s: skipping %s: no comment style defined for extension",
+				InvocationName,
+				filename,
+			)
+		}
+		return false
+	}
 }
 
 func highlight(filename string, cfg *Config) string {
@@ -182,15 +224,19 @@ func parseFiles(names []string, cfg *Config, speller aspell.Speller, out chan sf
 
 func main() {
 	log.SetFlags(0)
-	args := parseArgs()
+	options, args := parseArgs()
+	if options.applyBackup {
+		RunBackup()
+		return
+	} else if options.applyBackupAll {
+		BackupRestoreAll()
+		return
+	}
 	cfg := LoadConfig("config.toml")
-	files := util.Filter(
-		getFiles(args),
-		func(filename string) bool {
-			return careAboutFile(filename, &cfg)
-		},
-	)
-
+	files := getFiles(args, fileFilter(&cfg, &options))
+	if len(files) == 0 {
+		return
+	}
 	speller, err := aspell.NewSpeller(cfg.Aspell())
 	if err != nil {
 		Fatal("could not create speller: %s", err.Error())
@@ -200,7 +246,7 @@ func main() {
 	scr := tui.Init(&cfg)
 	defer tui.Quit(scr)
 
-	checker := NewSpellChecker(scr, speller, &cfg)
+	checker := NewSpellChecker(scr, speller, &cfg, &options)
 
 	sourceFiles := make(chan sf.SourceFile)
 	go parseFiles(files, &cfg, speller, sourceFiles)

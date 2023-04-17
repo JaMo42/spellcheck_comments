@@ -6,6 +6,14 @@ type Optional[T any] struct {
 	isSome bool
 }
 
+type dummyOptionalInner struct{}
+
+type DummyOptional = Optional[dummyOptionalInner]
+
+func dummyOptional(isSome bool) DummyOptional {
+	return Optional[dummyOptionalInner]{isSome: isSome}
+}
+
 // None creates an Optional with no value.
 func None[T any]() Optional[T] {
 	return Optional[T]{isSome: false}
@@ -50,8 +58,17 @@ func (self *Optional[T]) Take() Optional[T] {
 }
 
 // Then calles the given function with the contained value, if there is one.
-func (self Optional[T]) Then(f func(T)) {
+// A dummy optional is returned that can be used to chain a Else call.
+func (self Optional[T]) Then(f func(T)) DummyOptional {
 	if self.isSome {
 		f(self.inner)
+	}
+	return dummyOptional(self.isSome)
+}
+
+// Else calls the given function if the optional has no value.
+func (self Optional[T]) Else(f func()) {
+	if !self.isSome {
+		f()
 	}
 }
