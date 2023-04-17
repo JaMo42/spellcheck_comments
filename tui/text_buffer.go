@@ -1,6 +1,8 @@
 package tui
 
 import (
+	"strings"
+
 	"github.com/gdamore/tcell/v2"
 	"github.com/mattn/go-runewidth"
 
@@ -34,6 +36,10 @@ type Line struct {
 
 func (self *Line) addSlice(text string, style tcell.Style) {
 	width := runewidth.StringWidth(text)
+	self.addSliceWithWidth(text, width, style)
+}
+
+func (self *Line) addSliceWithWidth(text string, width int, style tcell.Style) {
 	self.slices = append(self.slices, TextSlice{text, style, self.width, width})
 	self.width += width
 }
@@ -62,13 +68,14 @@ type TextBuffer struct {
 	// capacity holds the number of bytes of all slices immediately after
 	// their creation. It is not updated if the content of a slice changes.
 	capacity int
+	tabSize  int
 }
 
-func NewTextBuffer() TextBuffer {
+func NewTextBuffer(tabSize int) TextBuffer {
 	return TextBuffer{
-		lines:    []Line{{[]TextSlice{}, 0}},
-		style:    tcell.StyleDefault,
-		capacity: 0,
+		lines:   []Line{{[]TextSlice{}, 0}},
+		style:   tcell.StyleDefault,
+		tabSize: tabSize,
 	}
 }
 
@@ -76,12 +83,52 @@ func (self *TextBuffer) SetStyle(style tcell.Style) {
 	self.style = style
 }
 
+// AddSlice adds a single slice to the buffer. The given slice may not contain
+// tab characters.
 func (self *TextBuffer) AddSlice(slice string) SliceIndex {
 	line := util.Back(self.lines)
 	sliceIdx := len(line.slices)
 	line.addSlice(slice, self.style)
 	self.capacity += len(slice)
 	return SliceIndex{len(self.lines) - 1, sliceIdx}
+}
+
+// addTabs adds a slice consisting of only tabs to the text buffer.
+func (self *TextBuffer) addTabs(count int) {
+	line := util.Back(self.lines)
+	startingOffset := line.width
+	var width int
+	// If we're not a multiple of the tab size we need to shorten the shift
+	// width of the first tab.
+	if startingOffset%self.tabSize == 0 {
+		width = count * self.tabSize
+	} else {
+		width = startingOffset%self.tabSize + (count-1)*self.tabSize
+	}
+	line.addSliceWithWidth(strings.Repeat("\t", count), width, self.style)
+	self.capacity += count
+}
+
+// AddTabbedSlice adds a slice that may contain tabs.
+func (self *TextBuffer) AddTabbedSlice(text string) {
+	var i int
+	// repeatedly add alternating slices of tabs and non-tabs
+	for len(text) != 0 {
+		// tabs
+		for i = 0; i < len(text) && text[i] == '\t'; i++ {
+		}
+		if i > 0 {
+			self.addTabs(i)
+			text = text[i:]
+		}
+		// non-tabs
+		for i = 0; i < len(text) && text[i] != '\t'; i++ {
+		}
+		if i > 0 {
+			self.AddSlice(text[:i])
+			text = text[i:]
+		}
+	}
 }
 
 func (self *TextBuffer) Newline() {

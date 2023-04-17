@@ -187,16 +187,6 @@ func fileExtension(filename string) string {
 	return *util.Back(strings.Split(filename, "."))
 }
 
-func waitForAnyKey(scr tcell.Screen) bool {
-	for {
-		ev := scr.PollEvent()
-		switch ev := ev.(type) {
-		case *tcell.EventKey:
-			return ev.Key() == tcell.KeyCtrlC
-		}
-	}
-}
-
 type GlobalControl struct {
 	key    rune
 	label  string
@@ -244,7 +234,7 @@ func parseFiles(names []string, cfg *Config, speller aspell.Speller, out chan sf
 	close(out)
 }
 
-func configPath() string {
+func configPath() (string, bool) {
 	configHome := os.Getenv("XDG_CONFIG_HOME")
 	if len(configHome) == 0 {
 		home := os.Getenv("HOME")
@@ -252,11 +242,11 @@ func configPath() string {
 			home = os.Getenv("Home")
 		}
 		if len(home) == 0 {
-			return ""
+			return "", false
 		}
 		configHome = fmt.Sprintf("%s/.config", home)
 	}
-	return filepath.Join(configHome, "spellcheck_comments.toml")
+	return filepath.Join(configHome, "spellcheck_comments.toml"), true
 }
 
 func main() {
@@ -270,7 +260,7 @@ func main() {
 		return
 	}
 	var cfg Config
-	if path := configPath(); len(path) != 0 {
+	if path, ok := configPath(); ok {
 		cfg = LoadConfig(path)
 	} else {
 		cfg = DefaultConfig()

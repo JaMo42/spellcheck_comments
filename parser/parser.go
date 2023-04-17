@@ -3,7 +3,6 @@ package parser
 
 import (
 	"regexp"
-	"strings"
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/trustmaster/go-aspell"
@@ -13,20 +12,6 @@ import (
 	"github.com/JaMo42/spellcheck_comments/tui"
 	"github.com/JaMo42/spellcheck_comments/util"
 )
-
-func ExpandTabs(s string, tabSize int, b *strings.Builder) string {
-	b.Reset()
-	for _, c := range []byte(s) {
-		if c == '\t' {
-			for i := 0; i < tabSize; i++ {
-				b.WriteByte(' ')
-			}
-		} else {
-			b.WriteByte(c)
-		}
-	}
-	return b.String()
-}
 
 // Filter returns true if none of the filters match the word.
 func Filter(s string, filters []*regexp.Regexp) bool {
@@ -47,12 +32,10 @@ func Parse(
 ) sf.SourceFile {
 	_lexer := NewLexer(source, commentStyle)
 	lexer := NewPeekable[Token](&_lexer)
-	tb := tui.NewTextBuffer()
+	tb := tui.NewTextBuffer(cfg.General.TabSize)
 	words := []sf.Word{}
 	inComment := false
-	builder := new(strings.Builder)
 	dimCode := cfg.General.DimCode
-	tabSize := cfg.General.TabSize
 	// Compiling these for every file is fine since we always have the overhead
 	// for the first file anyways and the other files are parsed in the background
 	// so a minor slowdown doesn't matter.
@@ -72,7 +55,7 @@ loop:
 		tok := lexer.Next()
 		switch tok.kind {
 		case TokenKind.Code:
-			tb.AddSlice(ExpandTabs(tok.text, tabSize, builder))
+			tb.AddTabbedSlice(tok.text)
 
 		case TokenKind.CommentWord:
 			idx := tb.AddSlice(tok.text)
