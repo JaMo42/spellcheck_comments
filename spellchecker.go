@@ -42,7 +42,7 @@ func NewSpellChecker(
 	var layout Layout
 	switch cfg.General.Layout {
 	case "aspell":
-		panic("unimplemented")
+		layout = new(AspellLayout)
 	default:
 		layout = new(DefaultLayout)
 	}

@@ -65,19 +65,19 @@ func (self *Dock) SetItems(items []string) {
 func (self *Dock) SetViewport(viewport Rectangle) {
 	myWidth := self.list.Width() + 2
 	myHeight := self.list.Height() + 2
-	xInside, width := alignAxis(viewport.width, myWidth, self.hAlign)
-	yInside, height := alignAxis(viewport.height, myHeight, self.vAlign)
-	lastX := self.viewport.x
-	lastY := self.viewport.y
+	xInside, width := alignAxis(viewport.Width, myWidth, self.hAlign)
+	yInside, height := alignAxis(viewport.Height, myHeight, self.vAlign)
+	lastX := self.viewport.X
+	lastY := self.viewport.Y
 	self.viewport = NewRectangle(
-		viewport.x+xInside,
-		viewport.y+yInside,
+		viewport.X+xInside,
+		viewport.Y+yInside,
 		width,
 		height,
 	)
 	self.list.columnWidth = Some((width - 2) / self.list.columns)
-	if self.viewport.x != lastX || self.viewport.y != lastY {
-		self.list.SetPosition(self.viewport.x+1, self.viewport.y+1)
+	if self.viewport.X != lastX || self.viewport.Y != lastY {
+		self.list.SetPosition(self.viewport.X+1, self.viewport.Y+1)
 	}
 }
 
@@ -89,6 +89,26 @@ func (self *Dock) Redraw(scr tcell.Screen) {
 	x, y, width, height := self.viewport.Parts()
 	Box(scr, x, y, width, height, Colors.BoxOutline)
 	self.list.Redraw(scr, x+1, y+1)
+}
+
+func (self *Dock) Up() {
+	self.list.Up()
+}
+
+func (self *Dock) Down() {
+	self.list.Down()
+}
+
+func (self *Dock) Left() {
+	self.list.Left()
+}
+
+func (self *Dock) Right() {
+	self.list.Right()
+}
+
+func (self *Dock) GetSelected() any {
+	return self.list.GetSelected()
 }
 
 func (self *Dock) Motion(x, y int) bool {

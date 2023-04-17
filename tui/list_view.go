@@ -191,6 +191,9 @@ func (self *ListView) Redraw(scr tcell.Screen, x, y int) {
 func (self *ListView) Width() (width int) {
 	for i := 0; i < self.columns; i++ {
 		width += util.MaxElem(util.Map(self.groups, func(g lvGroup) int {
+			if i >= len(g.columns) {
+				return 0
+			}
 			return g.columns[i].itemsWidth + self.itemWidthOffset
 		}))
 	}

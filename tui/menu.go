@@ -79,12 +79,12 @@ func (self *Menu) SetItems(items []string) {
 		}
 		self.list.AddItem(0, i, key, item)
 	}
-	self.viewport.width = self.list.Width()
-	self.viewport.height = self.list.Height()
+	self.viewport.Width = self.list.Width()
+	self.viewport.Height = self.list.Height()
 }
 
 func (self *Menu) Redraw(scr tcell.Screen) {
-	self.list.Redraw(scr, self.viewport.x, self.viewport.y)
+	self.list.Redraw(scr, self.viewport.X, self.viewport.Y)
 }
 
 // SetPosition sets the position on the menu next to a word. x and y are position
@@ -94,22 +94,22 @@ func (self *Menu) Redraw(scr tcell.Screen) {
 func (self *Menu) SetPosition(x, y, wordWidth int, inside Rectangle, updatePos bool) {
 	if self.preferredLocation == MenuLocation.Below {
 		// Align it so the word and the suggestions are on the same column
-		self.viewport.x = x - 3
-		self.viewport.y = y + 1
+		self.viewport.X = x - 3
+		self.viewport.Y = y + 1
 		self.isBelow = true
 	} else if self.preferredLocation == MenuLocation.Right &&
-		x+wordWidth+self.viewport.width <= inside.Right() {
-		self.viewport.x = x + wordWidth
-		self.viewport.y = y
+		x+wordWidth+self.viewport.Width <= inside.Right() {
+		self.viewport.X = x + wordWidth
+		self.viewport.Y = y
 		self.isBelow = false
 	} else {
-		self.viewport.x = x + wordWidth
-		self.viewport.y = y + 1
+		self.viewport.X = x + wordWidth
+		self.viewport.Y = y + 1
 		self.isBelow = true
 	}
 	self.viewport.Clamp(inside)
 	if updatePos {
-		self.list.SetPosition(self.viewport.x, self.viewport.y)
+		self.list.SetPosition(self.viewport.X, self.viewport.Y)
 	}
 }
 
@@ -119,27 +119,27 @@ func (self *Menu) SetPosition(x, y, wordWidth int, inside Rectangle, updatePos b
 // visible above the words line are returned.
 // NOTE: rect is assumed to be to the bottom right of the menu.
 func (self *Menu) Evade(rect, inside Rectangle) Optional[int] {
-	oldX := self.viewport.x
+	oldX := self.viewport.X
 	if self.viewport.Overlaps(rect) {
 		if !self.isBelow {
-			self.viewport.y++
+			self.viewport.Y++
 			self.isBelow = true
 		}
-		self.viewport.x = rect.x - self.viewport.width
+		self.viewport.X = rect.X - self.viewport.Width
 		self.viewport.Clamp(inside)
 		if self.viewport.Overlaps(rect) {
 			// rect was not successfully evaded, need to go above
-			self.viewport.y = 1
-			self.viewport.x = oldX
+			self.viewport.Y = 1
+			self.viewport.X = oldX
 			self.viewport.Clamp(inside)
-			self.list.SetPosition(self.viewport.x, self.viewport.y)
-			return Some(self.viewport.height + 1)
+			self.list.SetPosition(self.viewport.X, self.viewport.Y)
+			return Some(self.viewport.Height + 1)
 		}
 	}
 	// We update the list views position even if not changing the our viewport
 	// here since if we are calling this function we likely didn't update it
 	// in SetPosition.
-	self.list.SetPosition(self.viewport.x, self.viewport.y)
+	self.list.SetPosition(self.viewport.X, self.viewport.Y)
 	return None[int]()
 }
 

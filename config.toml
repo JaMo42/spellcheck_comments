@@ -28,3 +28,4 @@ filters = [
     "^[[:upper:]]?[[:lower:]]+[[:upper:]].*$",
     "^[[:alpha:]]*_[[:alpha:]]*$",
 ]
+layout = "aspell"

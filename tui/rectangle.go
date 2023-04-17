@@ -1,7 +1,7 @@
 package tui
 
 type Rectangle struct {
-	x, y, width, height int
+	X, Y, Width, Height int
 }
 
 func NewRectangle(x, y, width, height int) Rectangle {
@@ -9,43 +9,43 @@ func NewRectangle(x, y, width, height int) Rectangle {
 }
 
 func (self *Rectangle) Bottom() int {
-	return self.y + self.height
+	return self.Y + self.Height
 }
 
 func (self *Rectangle) Right() int {
-	return self.x + self.width
+	return self.X + self.Width
 }
 
 func (self *Rectangle) Clamp(inside Rectangle) {
-	if self.width > inside.width {
-		self.width = inside.width
+	if self.Width > inside.Width {
+		self.Width = inside.Width
 	}
-	if self.height > inside.height {
-		self.height = inside.height
+	if self.Height > inside.Height {
+		self.Height = inside.Height
 	}
-	if self.x < inside.x {
-		self.x = inside.x
+	if self.X < inside.X {
+		self.X = inside.X
 	}
-	if self.y < inside.y {
-		self.y = inside.y
+	if self.Y < inside.Y {
+		self.Y = inside.Y
 	}
 	if self.Right() > inside.Right() {
-		self.x = inside.Right() - self.width
+		self.X = inside.Right() - self.Width
 	}
 	if self.Bottom() > inside.Bottom() {
-		self.y = inside.Bottom() - self.height
+		self.Y = inside.Bottom() - self.Height
 	}
 }
 
 func (self *Rectangle) Parts() (int, int, int, int) {
-	return self.x, self.y, self.width, self.height
+	return self.X, self.Y, self.Width, self.Height
 }
 
 func (self *Rectangle) Contains(x, y int) bool {
-	return x >= self.x && y >= self.y && x < self.Right() && y < self.Bottom()
+	return x >= self.X && y >= self.Y && x < self.Right() && y < self.Bottom()
 }
 
 func (self *Rectangle) Overlaps(other Rectangle) bool {
-	return (self.x <= other.Right() && self.Right() > other.x) &&
-		(self.y <= other.Bottom() && self.Bottom() > other.y)
+	return (self.X <= other.Right() && self.Right() > other.X) &&
+		(self.Y <= other.Bottom() && self.Bottom() > other.Y)
 }
