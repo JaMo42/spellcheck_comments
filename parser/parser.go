@@ -2,46 +2,83 @@
 package parser
 
 import (
+	"regexp"
+	"strings"
+
 	"github.com/trustmaster/go-aspell"
 
 	. "github.com/JaMo42/spellcheck_comments/common"
 	sf "github.com/JaMo42/spellcheck_comments/source_file"
 	"github.com/JaMo42/spellcheck_comments/tui"
+	"github.com/JaMo42/spellcheck_comments/util"
 )
+
+func ExpandTabs(s string, tabSize int, b *strings.Builder) string {
+	b.Reset()
+	for _, c := range []byte(s) {
+		if c == '\t' {
+			for i := 0; i < tabSize; i++ {
+				b.WriteByte(' ')
+			}
+		} else {
+			b.WriteByte(c)
+		}
+	}
+	return b.String()
+}
+
+// Filter returns true if none of the filters match the word.
+func Filter(s string, filters []*regexp.Regexp) bool {
+	for _, re := range filters {
+		if re.MatchString(s) {
+			return false
+		}
+	}
+	return true
+}
 
 func Parse(
 	fileName, source string,
 	commentStyle CommentStyle,
 	speller aspell.Speller,
-	dimCode bool,
+	cfg *Config,
 ) sf.SourceFile {
 	_lexer := NewLexer(source, commentStyle)
 	lexer := NewPeekable[Token](&_lexer)
 	tb := tui.NewTextBuffer()
 	words := []sf.Word{}
-	inComent := false
+	inComment := false
+	builder := new(strings.Builder)
+	dimCode := cfg.General.DimCode
+	tabSize := cfg.General.TabSize
+	// Compiling these for every file is fine since we always have the overhead
+	// for the first file anyways and the other files are parsed in the background
+	// so a minor slowdown doesn't matter.
+	filters := util.Map(cfg.General.Filters, func(str string) *regexp.Regexp {
+		return regexp.MustCompile(str)
+	})
 loop:
 	for {
 		tok := lexer.Next()
 		switch tok.kind {
 		case TokenKind.Code:
-			tb.AddSlice(tok.text)
+			tb.AddSlice(ExpandTabs(tok.text, tabSize, builder))
 
 		case TokenKind.CommentWord:
 			idx := tb.AddSlice(tok.text)
-			if !speller.Check(tok.text) {
+			if !speller.Check(tok.text) && Filter(tok.text, filters) {
 				words = append(words, sf.NewWord(tok.text, nil, idx))
 			}
 
 		case TokenKind.CommentBegin:
-			inComent = true
+			inComment = true
 
 		case TokenKind.CommentEnd:
-			inComent = false
+			inComment = false
 
 		case TokenKind.Style:
 			style := tui.Ansi2Style(tok.text)
-			if dimCode && !inComent && lexer.Peek().kind != TokenKind.CommentBegin {
+			if dimCode && !inComment && lexer.Peek().kind != TokenKind.CommentBegin {
 				style = style.Dim(true)
 			}
 			tb.SetStyle(style)

@@ -8,10 +8,23 @@ line = ["#"]
 multi-begin = ["\"\"\"", "'''"]
 multi-end = ["\"\"\"", "'''"]
 
+[styles.toml]
+line = ["#"]
+
+[styles.ini]
+line = ["#", ";"]
+
 [extensions]
 c = ["c", "cc", "cpp", "cxx", "h", "hh", "hpp", "hxx", "rs", "go"]
 python = ["py"]
+toml = ["toml"]
+ini = ["ini", "cfg"]
 
 [general]
 highlight-command = "source-highlight -f esc --style-file=esc.style -i %FILE%"
 box-style = "heavysharp"
+# Ignore PascalCase, camelCalse and snake_case words as they're likely identifiers.
+filters = [
+    "^[[:upper:]]?[[:lower:]]+[[:upper:]].*$",
+    "^[[:alpha:]]*_[[:alpha:]]*$",
+]

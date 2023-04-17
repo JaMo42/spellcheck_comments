@@ -125,3 +125,10 @@ func (self *TextBuffer) ForEach(f func(string)) {
 		f("\n")
 	}
 }
+
+// ForEachInLine calls the given function for each slice in the specified line.
+func (self *TextBuffer) ForEachInLine(line int, f func(string)) {
+	for _, slice := range self.lines[line].slices {
+		f(slice.text)
+	}
+}

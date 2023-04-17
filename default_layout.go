@@ -14,7 +14,6 @@ type DefaultLayout struct {
 	pmenu         tui.Menu
 	menuContainer tui.MenuContainer
 	globalKeys    tui.Dock
-	viewport      tui.Rectangle
 }
 
 func (self *DefaultLayout) SetSource(sf *SourceFile) {
@@ -50,12 +49,12 @@ func (self *DefaultLayout) MouseReceivers() []tui.MouseReceiver {
 }
 
 func (self *DefaultLayout) Create() {
+	globalControls := globalControls()
 	self.source = tui.NewTextBufferView()
 	self.pmenu = tui.NewMenu(tui.MenuLocation.Below, 5, 2)
 	self.menuContainer = tui.NewMenuContainer()
 	self.menuContainer.SetMenu(&self.pmenu)
-	self.globalKeys = tui.NewDock(tui.Alignment.End, tui.Alignment.End, 1, 0, 4)
-	globalControls := GlobalControls()
+	self.globalKeys = tui.NewDock(tui.Alignment.End, tui.Alignment.End, 1, 0, len(globalControls))
 	self.globalKeys.SetPermanentItems(globalControls)
 	self.pmenu.TranslateAction(func(_, item int) any {
 		return ActionSelectSuggestion{item}
@@ -66,10 +65,10 @@ func (self *DefaultLayout) Create() {
 }
 
 func (self *DefaultLayout) Layout(width, height int) {
-	self.viewport = tui.NewRectangle(0, 0, width, height)
-	self.source.SetViewport(self.viewport)
-	self.menuContainer.SetViewport(self.viewport)
-	self.globalKeys.SetViewport(self.viewport)
+	screen := tui.NewRectangle(0, 0, width, height)
+	self.source.SetViewport(screen)
+	self.menuContainer.SetViewport(screen)
+	self.globalKeys.SetViewport(screen)
 	self.menuContainer.SetEvade(Some(self.globalKeys.Rect()))
 }
 

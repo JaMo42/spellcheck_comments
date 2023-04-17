@@ -56,6 +56,9 @@ func (self *Tui) Layout() {
 
 // Update calls the layouts Update method and shows the screen.
 func (self *Tui) Update(widget any) {
+	if widget == nil {
+		self.scr.Clear()
+	}
 	self.layout.Update(self.scr, widget)
 	self.scr.Show()
 }

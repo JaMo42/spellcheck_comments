@@ -12,13 +12,16 @@ const (
 )
 
 type CfgGeneral struct {
-	HighlightCommand  string `toml:"highlight-command"`
-	DimCode           bool   `toml:"dim-code"`
-	BoxStyle          string `toml:"box-style"`
-	ItalicToUnderline bool   `toml:"italic-to-underline"`
-	Language          string `toml:"language"`
-	Layout            string `toml:"layout"`
-	Mouse             bool   `toml:"mouse"`
+	HighlightCommand  string   `toml:"highlight-command"`
+	DimCode           bool     `toml:"dim-code"`
+	BoxStyle          string   `toml:"box-style"`
+	ItalicToUnderline bool     `toml:"italic-to-underline"`
+	Language          string   `toml:"language"`
+	Layout            string   `toml:"layout"`
+	Mouse             bool     `toml:"mouse"`
+	TabSize           int      `toml:"tab-size"`
+	Filters           []string `toml:"filters"`
+	Backup            bool     `toml:"backup"`
 }
 
 type CfgColors struct {
@@ -46,6 +49,9 @@ func DefaultConfig() Config {
 			Language:          "en_US",
 			Layout:            "default",
 			Mouse:             true,
+			TabSize:           4,
+			Filters:           []string{},
+			Backup:            true,
 		},
 		Colors: CfgColors{
 			Comment:           commentColorDefault,

@@ -108,10 +108,9 @@ func (self *Menu) SetPosition(x, y, wordWidth int, inside Rectangle, updatePos b
 		self.isBelow = true
 	}
 	self.viewport.Clamp(inside)
-	//if updatePos {
-	//	self.list.SetPosition(self.viewport.x, self.viewport.y)
-	//}
-	self.list.SetPosition(self.viewport.x, self.viewport.y)
+	if updatePos {
+		self.list.SetPosition(self.viewport.x, self.viewport.y)
+	}
 }
 
 // Attemps to evade rect while staying inside inside. The resulting viewport
@@ -133,11 +132,14 @@ func (self *Menu) Evade(rect, inside Rectangle) Optional[int] {
 			self.viewport.y = 1
 			self.viewport.x = oldX
 			self.viewport.Clamp(inside)
-			//self.list.SetPosition(self.viewport.x, self.viewport.y)
+			self.list.SetPosition(self.viewport.x, self.viewport.y)
 			return Some(self.viewport.height + 1)
 		}
-		//self.list.SetPosition(self.viewport.x, self.viewport.y)
 	}
+	// We update the list views position even if not changing the our viewport
+	// here since if we are calling this function we likely didn't update it
+	// in SetPosition.
+	self.list.SetPosition(self.viewport.x, self.viewport.y)
 	return None[int]()
 }
 

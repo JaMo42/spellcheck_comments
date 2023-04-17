@@ -10,7 +10,7 @@ import (
 )
 
 var (
-	stringBuilder strings.Builder
+	sfBuilder strings.Builder
 )
 
 type Word struct {
@@ -63,10 +63,13 @@ func (self *SourceFile) PeekWord() Optional[Word] {
 }
 
 func (self *SourceFile) String() string {
-	stringBuilder.Reset()
-	stringBuilder.Grow(self.tb.RequiredCapacity() - stringBuilder.Cap())
+	sfBuilder.Reset()
+	grow := self.tb.RequiredCapacity() - sfBuilder.Cap()
+	if grow > 0 {
+		sfBuilder.Grow(grow)
+	}
 	self.tb.ForEach(func(s string) {
-		stringBuilder.WriteString(s)
+		sfBuilder.WriteString(s)
 	})
-	return stringBuilder.String()
+	return sfBuilder.String()
 }

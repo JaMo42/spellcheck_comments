@@ -15,6 +15,7 @@ import (
 
 	. "github.com/JaMo42/spellcheck_comments/common"
 	"github.com/JaMo42/spellcheck_comments/parser"
+	sf "github.com/JaMo42/spellcheck_comments/source_file"
 	"github.com/JaMo42/spellcheck_comments/tui"
 	"github.com/JaMo42/spellcheck_comments/util"
 )
@@ -27,8 +28,6 @@ const (
 var (
 	globs []string
 )
-
-func UNUSED(x ...interface{}) {}
 
 func parseArgs() []string {
 	InvocationName = os.Args[0]
@@ -84,12 +83,11 @@ func getFiles(args []string) []string {
 		return discover(files, ".")
 	} else {
 		for _, arg := range args {
-			file, err := os.Open(arg)
+			stat, err := os.Stat(arg)
 			if err != nil {
 				log.Printf("%s: %s\n", InvocationName, err)
 				continue
 			}
-			stat, _ := file.Stat()
 			if stat.IsDir() {
 				files = discover(files, arg)
 			} else {
@@ -156,7 +154,7 @@ func (self *GlobalControl) Action() any {
 	return self.action
 }
 
-func GlobalControls() []tui.KeyAction {
+func globalControls() []tui.KeyAction {
 	x := func(k rune, l string, a any) *GlobalControl {
 		control := new(GlobalControl)
 		*control = GlobalControl{k, l, a}
@@ -170,6 +168,18 @@ func GlobalControls() []tui.KeyAction {
 	}
 }
 
+func parseFiles(names []string, cfg *Config, speller aspell.Speller, out chan sf.SourceFile) {
+	for _, filename := range names {
+		highlit := highlight(filename, cfg)
+		style := cfg.GetStyle(fileExtension(filename))
+		sf := parser.Parse(filename, highlit, style, speller, cfg)
+		if !sf.Ok() {
+			out <- sf
+		}
+	}
+	close(out)
+}
+
 func main() {
 	log.SetFlags(0)
 	args := parseArgs()
@@ -180,9 +190,6 @@ func main() {
 			return careAboutFile(filename, &cfg)
 		},
 	)
-	UNUSED(files)
-	files = []string{"source_files/timer.hpp"}
-	//files = []string{"source_files/hello_world.c"}
 
 	speller, err := aspell.NewSpeller(cfg.Aspell())
 	if err != nil {
@@ -195,14 +202,13 @@ func main() {
 
 	checker := NewSpellChecker(scr, speller, &cfg)
 
-	for _, filename := range files {
-		fmt.Println(filename)
-		content := highlight(filename, &cfg)
-		style := cfg.GetStyle(fileExtension(filename))
-		sf := parser.Parse(filename, content, style, speller, cfg.General.DimCode)
-		if sf.Ok() {
-			continue
+	sourceFiles := make(chan sf.SourceFile)
+	go parseFiles(files, &cfg, speller, sourceFiles)
+
+	for sf := range sourceFiles {
+		if checker.CheckFile(sf) {
+			break
 		}
-		checker.CheckFile(&sf)
 	}
+	checker.Finish()
 }
