@@ -159,16 +159,25 @@ func noHighlight(filename string) (string, bool) {
 }
 
 func highlight(filename string, cfg *Config) (string, bool) {
-	if len(cfg.General.HighlightCommand) == 0 {
+	if len(cfg.General.HighlightCommands) == 0 {
 		return noHighlight(filename)
 	}
-	highlightCommand := strings.ReplaceAll(cfg.General.HighlightCommand, "%FILE%", filename)
-	commandLine, err := shellquote.Split(highlightCommand)
-	if err != nil {
-		Fatal("syntax error in highlight command: %s", err)
+	var stdoutData []byte
+	for _, cmd := range cfg.General.HighlightCommands {
+		if len(cmd) == 0 {
+			continue
+		}
+		highlightCommand := strings.ReplaceAll(cmd, "%FILE%", filename)
+		commandLine, err := shellquote.Split(highlightCommand)
+		if err != nil {
+			Fatal("syntax error in highlight command: %s", err)
+		}
+		stdoutData, err = exec.Command(commandLine[0], commandLine[1:]...).Output()
+		if err == nil {
+			break
+		}
 	}
-	stdoutData, err := exec.Command(commandLine[0], commandLine[1:]...).Output()
-	if err != nil {
+	if len(stdoutData) == 0 {
 		return noHighlight(filename)
 	}
 	return string(stdoutData), false
@@ -280,6 +289,8 @@ func main() {
 
 	scr := tui.Init(&cfg)
 	defer tui.Quit(scr)
+	tui.Text(scr, 0, 0, "Waiting for highlighter", tcell.StyleDefault)
+	scr.Show()
 
 	checker := NewSpellChecker(scr, speller, &cfg, &options)
 

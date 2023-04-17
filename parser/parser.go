@@ -94,7 +94,8 @@ loop:
 
 		case TokenKind.Style:
 			style := tui.Ansi2Style(tok.text)
-			comment := inComment || lexer.Peek().kind == TokenKind.CommentBegin
+			comment := (inComment || lexer.Peek().kind == TokenKind.CommentBegin) &&
+				lexer.Peek().kind != TokenKind.CommentEnd
 			if dimCode && !comment {
 				style = style.Dim(true)
 			}

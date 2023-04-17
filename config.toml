@@ -21,7 +21,11 @@ toml = ["toml"]
 ini = ["ini", "cfg"]
 
 [general]
-highlight-command = "source-highlight -f esc --style-file=esc.style -i %FILE%"
+highlight-commands = [
+    "source-highlight -f esc --style-file=esc.style -i %FILE%",
+    "pygmentize %FILE%",
+]
+italic-to-underline = true
 box-style = "heavysharp"
 # Ignore PascalCase, camelCalse and snake_case words as they're likely identifiers.
 filters = [
@@ -29,5 +33,3 @@ filters = [
     "^[[:alpha:]]*_[[:alpha:]]*$",
 ]
 layout = "aspell"
-
-

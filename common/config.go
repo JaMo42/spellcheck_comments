@@ -15,7 +15,7 @@ const (
 var FallbackCommentColor string
 
 type CfgGeneral struct {
-	HighlightCommand  string   `toml:"highlight-command"`
+	HighlightCommands []string `toml:"highlight-commands"`
 	DimCode           bool     `toml:"dim-code"`
 	BoxStyle          string   `toml:"box-style"`
 	ItalicToUnderline bool     `toml:"italic-to-underline"`
@@ -45,7 +45,7 @@ type Config struct {
 func DefaultConfig() Config {
 	return Config{
 		General: CfgGeneral{
-			HighlightCommand:  "",
+			HighlightCommands: []string{},
 			DimCode:           true,
 			BoxStyle:          "rounded",
 			ItalicToUnderline: false,
@@ -80,7 +80,7 @@ func LoadConfig(pathname string) Config {
 		}
 	}
 	if cfg.Colors.Comment == commentColorDefault {
-		if len(cfg.General.HighlightCommand) == 0 {
+		if len(cfg.General.HighlightCommands) == 0 {
 			cfg.Colors.Comment = DefaultCommentColor
 		} else {
 			cfg.Colors.Comment = ""
