@@ -5,6 +5,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/gdamore/tcell/v2"
 	"github.com/trustmaster/go-aspell"
 
 	. "github.com/JaMo42/spellcheck_comments/common"
@@ -42,6 +43,7 @@ func Parse(
 	commentStyle CommentStyle,
 	speller aspell.Speller,
 	cfg *Config,
+	useDefaultCommentColor bool,
 ) sf.SourceFile {
 	_lexer := NewLexer(source, commentStyle)
 	lexer := NewPeekable[Token](&_lexer)
@@ -57,6 +59,14 @@ func Parse(
 	filters := util.Map(cfg.General.Filters, func(str string) *regexp.Regexp {
 		return regexp.MustCompile(str)
 	})
+	commentColor := tcell.StyleDefault
+	if useDefaultCommentColor {
+		if len(cfg.Colors.Comment) != 0 {
+			commentColor = tui.Colors.Comment
+		} else {
+			commentColor = tui.Ansi2Style(FallbackCommentColor).Dim(false)
+		}
+	}
 loop:
 	for {
 		tok := lexer.Next()
@@ -71,14 +81,21 @@ loop:
 			}
 
 		case TokenKind.CommentBegin:
+			if useDefaultCommentColor {
+				tb.SetStyle(commentColor)
+			}
 			inComment = true
 
 		case TokenKind.CommentEnd:
+			if useDefaultCommentColor {
+				tb.SetStyle(tcell.StyleDefault.Dim(dimCode))
+			}
 			inComment = false
 
 		case TokenKind.Style:
 			style := tui.Ansi2Style(tok.text)
-			if dimCode && !inComment && lexer.Peek().kind != TokenKind.CommentBegin {
+			comment := inComment || lexer.Peek().kind == TokenKind.CommentBegin
+			if dimCode && !comment {
 				style = style.Dim(true)
 			}
 			tb.SetStyle(style)

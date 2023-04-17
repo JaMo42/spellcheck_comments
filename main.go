@@ -150,7 +150,18 @@ func fileFilter(cfg *Config, options *Options) func(filename string, direct bool
 	}
 }
 
-func highlight(filename string, cfg *Config) string {
+func noHighlight(filename string) (string, bool) {
+	content, err := os.ReadFile(filename)
+	if err != nil {
+		return "", true
+	}
+	return string(content), true
+}
+
+func highlight(filename string, cfg *Config) (string, bool) {
+	if len(cfg.General.HighlightCommand) == 0 {
+		return noHighlight(filename)
+	}
 	highlightCommand := strings.ReplaceAll(cfg.General.HighlightCommand, "%FILE%", filename)
 	commandLine, err := shellquote.Split(highlightCommand)
 	if err != nil {
@@ -158,10 +169,9 @@ func highlight(filename string, cfg *Config) string {
 	}
 	stdoutData, err := exec.Command(commandLine[0], commandLine[1:]...).Output()
 	if err != nil {
-		// TODO: no need to fatal here, just continue without highlighting
-		Fatal("highlight command failed: %s", err)
+		return noHighlight(filename)
 	}
-	return string(stdoutData)
+	return string(stdoutData), false
 }
 
 func fileExtension(filename string) string {
@@ -212,9 +222,12 @@ func globalControls() []tui.KeyAction {
 
 func parseFiles(names []string, cfg *Config, speller aspell.Speller, out chan sf.SourceFile) {
 	for _, filename := range names {
-		highlit := highlight(filename, cfg)
+		highlit, failed := highlight(filename, cfg)
+		if len(highlit) == 0 {
+			continue
+		}
 		style := cfg.GetStyle(fileExtension(filename))
-		sf := parser.Parse(filename, highlit, style, speller, cfg)
+		sf := parser.Parse(filename, highlit, style, speller, cfg, failed)
 		if !sf.Ok() {
 			out <- sf
 		}

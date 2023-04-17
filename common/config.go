@@ -9,7 +9,10 @@ import (
 
 const (
 	commentColorDefault = "\000DEFAULT"
+	DefaultCommentColor = "\x1b[1;32m"
 )
+
+var FallbackCommentColor string
 
 type CfgGeneral struct {
 	HighlightCommand  string   `toml:"highlight-command"`
@@ -78,10 +81,13 @@ func LoadConfig(pathname string) Config {
 	}
 	if cfg.Colors.Comment == commentColorDefault {
 		if len(cfg.General.HighlightCommand) == 0 {
-			cfg.Colors.Comment = "\x1b[1;32m"
+			cfg.Colors.Comment = DefaultCommentColor
 		} else {
 			cfg.Colors.Comment = ""
 		}
+		FallbackCommentColor = DefaultCommentColor
+	} else {
+		FallbackCommentColor = cfg.Colors.Comment
 	}
 	return cfg
 }
