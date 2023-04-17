@@ -12,7 +12,7 @@ import (
 type TextSlice struct {
 	text  string
 	style tcell.Style
-	// offset is the visual offet of the slice from the start of the line
+	// offset is the visual offset of the slice from the start of the line
 	offset int
 	// width is the visual with of the slice
 	width int
@@ -22,7 +22,7 @@ func (self *TextSlice) Width() int {
 	return self.width
 }
 
-// ReverseColors toggles the revcrse attribute of the slices style.
+// ReverseColors toggles the reverse attribute of the slices style.
 func (self *TextSlice) ReverseColors() {
 	_, _, attrs := self.style.Decompose()
 	on := attrs&tcell.AttrReverse == tcell.AttrReverse

@@ -89,7 +89,7 @@ func (self *Menu) Redraw(scr tcell.Screen) {
 
 // SetPosition sets the position on the menu next to a word. x and y are position
 // of the word and wordWidth is the width of that word. The menu will be
-// appropiately position inside the given rectangle to be next to that word.
+// appropriately position inside the given rectangle to be next to that word.
 // If updatePos is false the list views position is not updated.
 func (self *Menu) SetPosition(x, y, wordWidth int, inside Rectangle, updatePos bool) {
 	if self.preferredLocation == MenuLocation.Below {
@@ -113,7 +113,7 @@ func (self *Menu) SetPosition(x, y, wordWidth int, inside Rectangle, updatePos b
 	}
 }
 
-// Attemps to evade rect while staying inside inside. The resulting viewport
+// Attempts to evade rect while staying inside inside. The resulting viewport
 // will always be inside inside but it cannot guarantee that rect will always
 // be evaded. If the menu needs to go above the word, the lines that need to be
 // visible above the words line are returned.

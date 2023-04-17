@@ -48,7 +48,7 @@ func (self *Dock) TranslateAction(f func(int, int) any) {
 }
 
 func (self *Dock) SetPermanentItems(items []KeyAction) {
-	// XXX: we just KeyAction for the type here as that our only usecase and
+	// XXX: we just KeyAction for the type here as that our only use case and
 	// there is no need to be more generic.
 	for i, p := range items {
 		self.list.AddItem(1, i, p.Key(), p.Label())

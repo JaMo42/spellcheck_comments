@@ -10,7 +10,7 @@ import (
 	"golang.org/x/exp/maps"
 )
 
-// List view orginization:
+// List view organization:
 //
 // lvItem -| 1) abc  3) ghi |- lvGroup |
 //           2) def  4) jkl |          |
@@ -64,7 +64,7 @@ type ListView struct {
 	prefSelRow          int
 	style               tcell.Style
 	// Due to the split up and irregular nature of this structure we'd need to
-	// essentialy check the rectangle of each item to resolve a mouse event but
+	// essentially check the rectangle of each item to resolve a mouse event but
 	// since we don't have that many points in a terminal we can just map each
 	// cell occupied by the list view to its index.
 	itemPositions   map[lvPoint]lvItemIndex

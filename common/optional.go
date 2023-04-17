@@ -57,7 +57,7 @@ func (self *Optional[T]) Take() Optional[T] {
 	return new
 }
 
-// Then calles the given function with the contained value, if there is one.
+// Then calls the given function with the contained value, if there is one.
 // A dummy optional is returned that can be used to chain a Else call.
 func (self Optional[T]) Then(f func(T)) DummyOptional {
 	if self.isSome {

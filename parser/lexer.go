@@ -261,7 +261,7 @@ func (self *Lexer) getNextTokens() {
 				self.used -= tokenLength
 				self.createToken(TokenKind.Code).Then(addToken)
 				addToken(self.createMarker(TokenKind.CommentBegin))
-				// TODO: I don't think this is neccessary
+				// TODO: I don't think this is necessary
 				//self.used = tokenLength
 				//self.createToken(TokenKind.Code).Then(addToken)
 
