@@ -48,6 +48,7 @@ func (self *AspellLayout) Show(index tui.SliceIndex) {
 
 func (self *AspellLayout) SetSuggestions(suggestions []string) {
 	self.dock.SetItems(suggestions)
+	self.dock.UpdateMouseMap()
 }
 
 func (self *AspellLayout) ArrowReceiver() tui.ArrowReceiver {
@@ -72,6 +73,7 @@ func (self *AspellLayout) Create() {
 			return globalControls[item].Action()
 		}
 	})
+	self.dock.AlwaysShowSelection(true)
 }
 
 func (self *AspellLayout) Layout(width, height int) {

@@ -39,6 +39,10 @@ func NewDock(vAlign, hAlign, columnCount, dynRows, permRows int) Dock {
 	}
 }
 
+func (self *Dock) AlwaysShowSelection(show bool) {
+	self.list.AlwaysShowSelection = show
+}
+
 func (self *Dock) TranslateAction(f func(int, int) any) {
 	self.list.TranslateAction(f)
 }
@@ -79,6 +83,10 @@ func (self *Dock) SetViewport(viewport Rectangle) {
 	if self.viewport.X != lastX || self.viewport.Y != lastY {
 		self.list.SetPosition(self.viewport.X+1, self.viewport.Y+1)
 	}
+}
+
+func (self *Dock) UpdateMouseMap() {
+	self.list.SetPosition(self.viewport.X+1, self.viewport.Y+1)
 }
 
 func (self *Dock) Rect() Rectangle {

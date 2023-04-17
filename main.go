@@ -287,10 +287,16 @@ func main() {
 	sourceFiles := make(chan sf.SourceFile)
 	go parseFiles(files, &cfg, speller, sourceFiles)
 
+	allOk := true
 	for sf := range sourceFiles {
+		allOk = false
 		if checker.CheckFile(sf) {
 			break
 		}
 	}
 	checker.Finish()
+	if allOk {
+		scr.Suspend()
+		fmt.Println("All files OK")
+	}
 }
