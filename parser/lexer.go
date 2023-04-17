@@ -10,6 +10,8 @@ import (
 )
 
 const (
+	eofRune            = rune(0)
+	eofStateInfo       = -1
 	lexStateInCode int = iota
 	lexStateInEscape
 	lexStateInComment
@@ -124,16 +126,15 @@ func buildDfa(style CommentStyle) Dfa {
 		state.AddTransition("\n", state.Id())
 	}
 	inCodeState.AddTransition("\n", inCodeState.Id())
+	eofState := dfa.AddState(eofStateInfo)
+	inCodeState.AddTransition(string(eofRune), eofState.Id())
 	return dfa
 }
 
 func NewLexer(source string, commentStyle CommentStyle) Lexer {
 	dfa := buildDfa(commentStyle)
 	runes := []rune(source)
-	// XXX: the loop in getNextTokens needs a newline at the end or we crash
-	if *util.Back(runes) != '\n' {
-		runes = append(runes, '\n')
-	}
+	runes = append(runes, eofRune)
 	return Lexer{
 		// TODO: we use runes to get correct column information but since we need
 		// to calculate the visual column later anyways we don't actually need
@@ -250,6 +251,10 @@ func (self *Lexer) getNextTokens() {
 		stateChanged, tokenLength := self.dfa.Process(char)
 		if stateChanged {
 			self.state = self.dfa.CurrentState().info
+			if self.state == eofStateInfo {
+				self.nextTokens = append(self.nextTokens, self.createMarker(TokenKind.EOF))
+				return
+			}
 			transition := lexTransition{lastState.info, self.state}
 			switch transition {
 			case lexTransition{lexStateInCode, lexStateInComment}:

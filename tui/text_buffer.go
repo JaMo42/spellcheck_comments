@@ -165,11 +165,15 @@ func (self *TextBuffer) RequiredCapacity() int {
 // ForEach calls the given function for each slice and line ending of the text
 // buffer. For newlines it is always called with "\n".
 func (self *TextBuffer) ForEach(f func(string)) {
+	first := true
 	for _, line := range self.lines {
+		if !first {
+			f("\n")
+		}
+		first = false
 		for _, slice := range line.slices {
 			f(slice.text)
 		}
-		f("\n")
 	}
 }
 
