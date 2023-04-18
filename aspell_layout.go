@@ -13,9 +13,9 @@ func AsRows[T any](items []T, columns int) []T {
 	rows := util.CeilDiv(len(items), columns)
 	result := make([]T, len(items))
 	i := 0
-	for c := 0; c < columns; c++ {
-		for r := 0; r < rows; r++ {
-			idx := r*rows + c
+	for r := 0; r < rows; r++ {
+		for c := 0; c < columns; c++ {
+			idx := c*rows + r
 			if idx >= len(items) {
 				return result
 			}
@@ -62,8 +62,8 @@ func (self *AspellLayout) MouseReceivers() []tui.MouseReceiver {
 
 func (self *AspellLayout) Create() {
 	const columnCount = 2
-	globalControls := globalControls()
-	//globalControls := AsRows(_globalControls, columnCount)
+	_globalControls := globalControls()
+	globalControls := AsRows(_globalControls, columnCount)
 	self.source = tui.NewTextBufferView()
 	permRows := util.CeilDiv(len(globalControls), columnCount)
 	self.dock = tui.NewDock(tui.Alignment.End, tui.Alignment.Fill, columnCount, 5, permRows)
