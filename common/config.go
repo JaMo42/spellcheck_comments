@@ -105,6 +105,7 @@ func (self *Config) GetStyle(extension string) CommentStyle {
 
 func (self *Config) Aspell() map[string]string {
 	return map[string]string{
-		"lang": self.General.Language,
+		"lang":         self.General.Language,
+		"run-together": "true",
 	}
 }

@@ -3,6 +3,7 @@ package parser
 
 import (
 	"regexp"
+	"unicode"
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/trustmaster/go-aspell"
@@ -21,6 +22,22 @@ func Filter(s string, filters []*regexp.Regexp) bool {
 		}
 	}
 	return true
+}
+
+func IsWord(s string) bool {
+	letters := 0
+	haveApostrophe := false
+	for _, char := range s {
+		if unicode.IsLetter(char) {
+			letters++
+		} else if char == '\'' {
+			if haveApostrophe {
+				return false
+			}
+			haveApostrophe = true
+		}
+	}
+	return letters >= 2
 }
 
 func Parse(
@@ -61,11 +78,7 @@ loop:
 
 		case TokenKind.CommentWord:
 			idx := tb.AddSlice(tok.text)
-			// TODO: since the word detection allows hyphens and apostrophes we
-			// sometimes get weird things matched as word like `'''`, `'m'`, or
-			// `-----`. We also split words on digits (i.e. Ansi2Style becomes
-			// `Ansi` and `Style` with the `2` just being code)
-			if !speller.Check(tok.text) && Filter(tok.text, filters) {
+			if IsWord(tok.text) && !speller.Check(tok.text) && Filter(tok.text, filters) {
 				words = append(words, sf.NewWord(tok.text, nil, idx))
 			}
 
