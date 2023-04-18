@@ -3,11 +3,12 @@ package main
 import (
 	"log"
 
+	"github.com/gdamore/tcell/v2"
+	"github.com/trustmaster/go-aspell"
+
 	. "github.com/JaMo42/spellcheck_comments/common"
 	. "github.com/JaMo42/spellcheck_comments/source_file"
 	"github.com/JaMo42/spellcheck_comments/tui"
-	"github.com/gdamore/tcell/v2"
-	"github.com/trustmaster/go-aspell"
 )
 
 type ActionIgnore struct{ all bool }

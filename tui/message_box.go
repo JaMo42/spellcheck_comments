@@ -3,9 +3,10 @@ package tui
 import (
 	"unicode"
 
-	"github.com/JaMo42/spellcheck_comments/util"
 	"github.com/gdamore/tcell/v2"
 	"github.com/mattn/go-runewidth"
+
+	"github.com/JaMo42/spellcheck_comments/util"
 )
 
 type mbButton struct {

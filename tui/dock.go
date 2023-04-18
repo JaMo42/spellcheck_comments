@@ -1,8 +1,9 @@
 package tui
 
 import (
-	. "github.com/JaMo42/spellcheck_comments/common"
 	"github.com/gdamore/tcell/v2"
+
+	. "github.com/JaMo42/spellcheck_comments/common"
 )
 
 type DockItem struct {

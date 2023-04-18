@@ -3,11 +3,12 @@ package tui
 import (
 	"fmt"
 
-	. "github.com/JaMo42/spellcheck_comments/common"
-	"github.com/JaMo42/spellcheck_comments/util"
 	"github.com/gdamore/tcell/v2"
 	"github.com/mattn/go-runewidth"
 	"golang.org/x/exp/maps"
+
+	. "github.com/JaMo42/spellcheck_comments/common"
+	"github.com/JaMo42/spellcheck_comments/util"
 )
 
 // List view organization:

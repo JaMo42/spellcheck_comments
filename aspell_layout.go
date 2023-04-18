@@ -1,10 +1,11 @@
 package main
 
 import (
+	"github.com/gdamore/tcell/v2"
+
 	. "github.com/JaMo42/spellcheck_comments/source_file"
 	"github.com/JaMo42/spellcheck_comments/tui"
 	"github.com/JaMo42/spellcheck_comments/util"
-	"github.com/gdamore/tcell/v2"
 )
 
 // Rearranges the given array so items appear in rows when added to the dock.
