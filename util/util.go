@@ -53,8 +53,8 @@ func Sum(arr []int) int {
 	return sum
 }
 
-// Xxs pops the first value from the given slice.
-func Xxs[T any](arr []T) (T, []T) {
+// PopFront pops the first value from the given slice.
+func PopFront[T any](arr []T) (T, []T) {
 	x, xs := arr[0], arr[1:]
 	return x, xs
 }

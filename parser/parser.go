@@ -47,9 +47,11 @@ func Parse(
 		if len(cfg.Colors.Comment) != 0 {
 			commentColor = tui.Colors.Comment
 		} else {
-			commentColor = tui.Ansi2Style(FallbackCommentColor).Dim(false)
+			commentColor = tui.Ansi2Style(FallbackCommentColor)
 		}
+		commentColor = commentColor.Dim(false)
 	}
+	tb.SetStyle(tcell.StyleDefault.Dim(dimCode))
 loop:
 	for {
 		tok := lexer.Next()
@@ -59,6 +61,10 @@ loop:
 
 		case TokenKind.CommentWord:
 			idx := tb.AddSlice(tok.text)
+			// TODO: since the word detection allows hyphens and apostrophes we
+			// sometimes get weird things matched as word like `'''`, `'m'`, or
+			// `-----`. We also split words on digits (i.e. Ansi2Style becomes
+			// `Ansi` and `Style` with the `2` just being code)
 			if !speller.Check(tok.text) && Filter(tok.text, filters) {
 				words = append(words, sf.NewWord(tok.text, nil, idx))
 			}

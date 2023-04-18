@@ -214,6 +214,8 @@ func globalControls() []tui.KeyAction {
 	return []tui.KeyAction{
 		x('i', "Ignore", ActionIgnore{false}),
 		x('I', "Ignore all", ActionIgnore{true}),
+		x('r', "Replace", ActionReplace{false}),
+		x('R', "Replace all", ActionReplace{true}),
 		x('x', "Exit", ActionExit{}),
 		x('b', "Abort", ActionAbort{}),
 	}

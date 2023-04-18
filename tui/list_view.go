@@ -72,7 +72,7 @@ type ListView struct {
 	translateAction func(int, int) any
 }
 
-func NewColumns(
+func NewListView(
 	columnCount int,
 	columnWidth Optional[int],
 	padColumns bool,
@@ -102,6 +102,14 @@ func NewColumns(
 	}
 }
 
+func NewGenericListView(columnCount int) ListView {
+	return ListView{
+		columns:       columnCount,
+		itemFormat:    "%c%-*s",
+		itemPositions: make(map[lvPoint]lvItemIndex),
+	}
+}
+
 // TranslateAction specifies how to translate the current selection into an
 // action. The parameters are f(groupIndex, itemIndexInGroup).
 func (self *ListView) TranslateAction(f func(int, int) any) {
@@ -121,6 +129,12 @@ func (self *ListView) AddGroup(rows int) int {
 func (self *ListView) SetRows(group, rows int) {
 	self.groups[group].rows = rows
 	self.ClearGroup(group)
+}
+
+// SetColumnWidth sets or removes the fixed column width. This does not update
+// the mouse map.
+func (self *ListView) SetColumnWidth(width Optional[int]) {
+	self.columnWidth = width
 }
 
 // ClearGroup empties a group.
@@ -232,6 +246,17 @@ func (self *ListView) SetPosition(x, y int) {
 		}
 		yy += uint16(g.rows)
 	}
+}
+
+func (self *ListView) ResetSelection() {
+	// Note: skip resetting group, since in our usage this only matters for the
+	// aspell layout where this means that if we are in the suggestions group
+	// we do a normal reset but if we have the ignore action selected we stay
+	// on that which I quite like. We also reset to the ignore action if we are
+	// on any other of the global control but that's fine.
+	//self.selGrp = 0
+	self.selRow = 0
+	self.selCol = 0
 }
 
 func (self *ListView) selectedGroup() *lvGroup {

@@ -24,17 +24,17 @@ type Dock struct {
 }
 
 func NewDock(vAlign, hAlign, columnCount, dynRows, permRows int) Dock {
-	columns := NewColumns(
+	list := NewListView(
 		columnCount,
 		None[int](),
 		false,
 		true,
 		tcell.StyleDefault,
 	)
-	columns.AddGroup(dynRows)
-	columns.AddGroup(permRows)
+	list.AddGroup(dynRows)
+	list.AddGroup(permRows)
 	return Dock{
-		list:   columns,
+		list:   list,
 		vAlign: vAlign,
 		hAlign: hAlign,
 	}
@@ -49,10 +49,12 @@ func (self *Dock) TranslateAction(f func(int, int) any) {
 }
 
 func (self *Dock) SetPermanentItems(items []KeyAction) {
-	// XXX: we just KeyAction for the type here as that our only use case and
-	// there is no need to be more generic.
+	// XXX: we just use KeyAction for the type here as that our only use case
+	// and there is no need to be more generic.
 	for i, p := range items {
-		self.list.AddItem(1, i, p.Key(), p.Label())
+		key := p.Key()
+		label := p.Label()
+		self.list.AddItem(1, i, key, label)
 	}
 }
 
@@ -65,6 +67,7 @@ func (self *Dock) SetItems(items []string) {
 		}
 		self.list.AddItem(0, i, key, item)
 	}
+	self.list.ResetSelection()
 }
 
 func (self *Dock) SetViewport(viewport Rectangle) {

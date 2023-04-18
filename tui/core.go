@@ -2,7 +2,9 @@
 package tui
 
 import (
+	"fmt"
 	"log"
+	"reflect"
 	"strconv"
 	"strings"
 
@@ -46,12 +48,35 @@ type PaletteSpec struct {
 }
 
 type BoxStyle struct {
-	vertical    rune
-	horizontal  rune
-	topLeft     rune
-	topRight    rune
-	bottomLeft  rune
-	bottomRight rune
+	Vertical       rune
+	Horizontal     rune
+	TopLeft        rune
+	TopRight       rune
+	BottomLeft     rune
+	BottomRight    rune
+	VerticalRight  rune
+	VerticalLeft   rune
+	HorizontalDown rune
+	HorizontalUp   rune
+	Cross          rune
+}
+
+func BoxStyleFromString(set string) BoxStyle {
+	style := BoxStyle{}
+	value := reflect.ValueOf(&style)
+	fieldCount := reflect.ValueOf(style).NumField()
+	runes := []rune(set)
+	if fieldCount != len(runes) {
+		panic(fmt.Sprintf(
+			"BoxStyleFromString: set contains %d symbols, expected %d",
+			len(runes),
+			fieldCount),
+		)
+	}
+	for i := 0; i < fieldCount; i++ {
+		value.Elem().Field(i).SetInt(int64(runes[i]))
+	}
+	return style
 }
 
 func GetBoxStyle(description string) BoxStyle {
@@ -60,15 +85,15 @@ func GetBoxStyle(description string) BoxStyle {
 		log.Printf("unknown box style ‘%s’, using rounded", description)
 		fallthrough
 	case "rounded":
-		return BoxStyle{'│', '─', '╭', '╮', '╰', '╯'}
+		return BoxStyleFromString("│─╭╮╰╯├┤┬┴┼")
 	case "sharp":
-		return BoxStyle{'│', '─', '┌', '┐', '└', '┘'}
+		return BoxStyleFromString("│─┌┐└┘├┤┬┴┼")
 	case "heavysharp":
-		return BoxStyle{'┃', '━', '┏', '┓', '┗', '┛'}
+		return BoxStyleFromString("┃━┏┓┗┛┣┫┳┻╋")
 	case "double":
-		return BoxStyle{'║', '═', '╔', '╗', '╚', '╝'}
+		return BoxStyleFromString("║═╔╗╚╝╠╣╦╩╬")
 	case "ascii":
-		return BoxStyle{'|', '-', '+', '+', '+', '+'}
+		return BoxStyleFromString("|-+++++++++")
 	}
 }
 
@@ -122,6 +147,9 @@ func TextWithHighlight(
 	highlight int,
 	normalStyle, highlightStyle tcell.Style,
 ) int {
+	if highlight < 0 {
+		return Text(scr, x, y, text, normalStyle)
+	}
 	var style tcell.Style
 	for i, char := range text {
 		if i == highlight {
@@ -133,6 +161,13 @@ func TextWithHighlight(
 		x += runewidth.RuneWidth(char)
 	}
 	return x
+}
+
+// RightText prints a right aligned string.
+func RightText(scr tcell.Screen, x, y, width int, text string, style tcell.Style) {
+	textWidth := runewidth.StringWidth(text)
+	x += width - textWidth
+	Text(scr, x, y, text, style)
 }
 
 func HLine(scr tcell.Screen, x, y int, width int, char rune, style tcell.Style) {
@@ -150,14 +185,14 @@ func VLine(scr tcell.Screen, x, y int, height int, char rune, style tcell.Style)
 func Box(scr tcell.Screen, x, y, width, height int, style tcell.Style) {
 	right := x + width - 1
 	bottom := y + height - 1
-	scr.SetContent(x, y, boxStyle.topLeft, nil, style)
-	scr.SetContent(right, y, boxStyle.topRight, nil, style)
-	scr.SetContent(x, bottom, boxStyle.bottomLeft, nil, style)
-	scr.SetContent(right, bottom, boxStyle.bottomRight, nil, style)
-	HLine(scr, x+1, y, width-2, boxStyle.horizontal, style)
-	HLine(scr, x+1, bottom, width-2, boxStyle.horizontal, style)
-	VLine(scr, x, y+1, height-2, boxStyle.vertical, style)
-	VLine(scr, right, y+1, height-2, boxStyle.vertical, style)
+	scr.SetContent(x, y, boxStyle.TopLeft, nil, style)
+	scr.SetContent(right, y, boxStyle.TopRight, nil, style)
+	scr.SetContent(x, bottom, boxStyle.BottomLeft, nil, style)
+	scr.SetContent(right, bottom, boxStyle.BottomRight, nil, style)
+	HLine(scr, x+1, y, width-2, boxStyle.Horizontal, style)
+	HLine(scr, x+1, bottom, width-2, boxStyle.Horizontal, style)
+	VLine(scr, x, y+1, height-2, boxStyle.Vertical, style)
+	VLine(scr, right, y+1, height-2, boxStyle.Vertical, style)
 }
 
 func FillRect(scr tcell.Screen, x, y, width, height int, char rune, style tcell.Style) {
@@ -178,16 +213,16 @@ func getColor(tok int, tokens []int, style tcell.Style) (tcell.Style, []int) {
 	}
 	if tok == 38 || tok == 48 {
 		isBackground = tok == 48
-		tok, tokens = util.Xxs(tokens)
+		tok, tokens = util.PopFront(tokens)
 		if tok == 5 {
 			var index int
-			index, tokens = util.Xxs(tokens)
+			index, tokens = util.PopFront(tokens)
 			color = tcell.PaletteColor(index)
 		} else if tok == 2 {
 			var red, green, blue int
-			red, tokens = util.Xxs(tokens)
-			green, tokens = util.Xxs(tokens)
-			blue, tokens = util.Xxs(tokens)
+			red, tokens = util.PopFront(tokens)
+			green, tokens = util.PopFront(tokens)
+			blue, tokens = util.PopFront(tokens)
 			color = tcell.NewRGBColor(int32(red), int32(green), int32(blue))
 		}
 		// silently ignore invalid color type
@@ -223,7 +258,7 @@ func Ansi2Style(sequence string) (style tcell.Style) {
 	)
 	var tok int
 	for len(tokens) > 0 {
-		tok, tokens = util.Xxs(tokens)
+		tok, tokens = util.PopFront(tokens)
 		switch tok {
 		case 0:
 			style = tcell.StyleDefault

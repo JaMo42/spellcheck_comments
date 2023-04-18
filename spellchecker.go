@@ -26,11 +26,15 @@ type Layout interface {
 }
 
 type SpellChecker struct {
-	scr        tcell.Screen
-	ui         tui.Tui
-	layout     Layout
-	speller    aspell.Speller
-	ignore     map[string]bool
+	scr     tcell.Screen
+	ui      tui.Tui
+	layout  Layout
+	speller aspell.Speller
+	ignore  map[string]bool
+	// replacements holds the words changed with replaceAll
+	replacements map[string]string
+	// replaced holds the words changed by replaceAll in the current file
+	replaced   map[tui.SliceIndex]bool
 	changed    bool
 	discardAll bool
 	doBackup   bool
@@ -59,12 +63,24 @@ func NewSpellChecker(
 		ui.SetKey(key, ActionSelectSuggestion{i})
 	}
 	return SpellChecker{
-		scr:      scr,
-		ui:       ui,
-		layout:   layout,
-		speller:  speller,
-		ignore:   make(map[string]bool),
-		doBackup: cfg.General.Backup || options.backup,
+		scr:          scr,
+		ui:           ui,
+		layout:       layout,
+		speller:      speller,
+		ignore:       make(map[string]bool),
+		replacements: make(map[string]string),
+		replaced:     make(map[tui.SliceIndex]bool),
+		doBackup:     cfg.General.Backup || options.backup,
+	}
+}
+
+// replaceAllInFile replaces all occurrences of a word in the current file.
+func (self *SpellChecker) replaceAllInFile(file *FileContext, from string, to string, after tui.SliceIndex) {
+	for _, word := range file.Source().Words() {
+		if word.Index.IsAfter(after) && word.Original == from {
+			self.replaced[word.Index] = true
+			file.Change(word.Index, to)
+		}
 	}
 }
 
@@ -76,9 +92,13 @@ func (self *SpellChecker) CheckFile(sf SourceFile) bool {
 			self.files = append(self.files, file)
 		}
 	}()
+	self.replaced = make(map[tui.SliceIndex]bool)
+	for from, to := range self.replacements {
+		self.replaceAllInFile(&file, from, to, tui.NewSliceIndex(0, 0))
+	}
 	for maybeWord := sf.NextWord(); maybeWord.IsSome(); maybeWord = sf.NextWord() {
 		word := maybeWord.Get()
-		if self.ignore[word.Original] {
+		if self.ignore[word.Original] || self.replaced[word.Index] {
 			continue
 		}
 		suggestions := self.speller.Suggest(word.Original)
@@ -102,6 +122,32 @@ func (self *SpellChecker) CheckFile(sf SourceFile) bool {
 		case ActionIgnore:
 			if action.all {
 				self.ignore[word.Original] = true
+			}
+
+		case ActionReplace:
+			var caption string
+			if action.all {
+				caption = "Replace all"
+			} else {
+				caption = "Replace"
+			}
+			maybeText := tui.InputBox(
+				self.scr,
+				caption,
+				"Enter replacement",
+				self.speller.Suggest,
+			)
+			if maybeText.IsSome() && len(maybeText.Unwrap()) > 0 {
+				text := maybeText.Unwrap()
+				if action.all {
+					self.replacements[word.Original] = text
+					self.replaceAllInFile(&file, word.Original, text, word.Index)
+				} else {
+					file.Change(word.Index, text)
+				}
+				self.changed = true
+			} else {
+				goto repeatKey
 			}
 
 		case ActionAbort:

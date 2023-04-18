@@ -16,6 +16,10 @@ func NewFileContext(sf sf.SourceFile) FileContext {
 	return FileContext{sf: sf}
 }
 
+func (self *FileContext) Source() *sf.SourceFile {
+	return &self.sf
+}
+
 func (self *FileContext) Change(index tui.SliceIndex, text string) {
 	self.sf.Text().SetSliceText(index, text)
 	self.changes = append(self.changes, index)

@@ -1,6 +1,6 @@
 package common
 
-// Optional is a single-value container that can either have a value or not.
+// Optional is a single value container that can either have a value or not.
 type Optional[T any] struct {
 	inner  T
 	isSome bool

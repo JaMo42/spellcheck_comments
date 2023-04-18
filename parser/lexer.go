@@ -261,9 +261,6 @@ func (self *Lexer) getNextTokens() {
 				self.used -= tokenLength
 				self.createToken(TokenKind.Code).Then(addToken)
 				addToken(self.createMarker(TokenKind.CommentBegin))
-				// TODO: I don't think this is necessary
-				//self.used = tokenLength
-				//self.createToken(TokenKind.Code).Then(addToken)
 
 			case lexTransition{lexStateInCode, lexStateInEscape}:
 				self.used -= tokenLength
@@ -318,6 +315,6 @@ func (self *Lexer) Next() (t Token) {
 	for len(self.nextTokens) == 0 {
 		self.getNextTokens()
 	}
-	t, self.nextTokens = util.Xxs(self.nextTokens)
+	t, self.nextTokens = util.PopFront(self.nextTokens)
 	return t
 }

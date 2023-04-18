@@ -62,7 +62,8 @@ func (self *AspellLayout) MouseReceivers() []tui.MouseReceiver {
 
 func (self *AspellLayout) Create() {
 	const columnCount = 2
-	globalControls := AsRows(globalControls(), columnCount)
+	globalControls := globalControls()
+	//globalControls := AsRows(_globalControls, columnCount)
 	self.source = tui.NewTextBufferView()
 	permRows := util.CeilDiv(len(globalControls), columnCount)
 	self.dock = tui.NewDock(tui.Alignment.End, tui.Alignment.Fill, columnCount, 5, permRows)

@@ -46,8 +46,8 @@ func (self *TextBufferView) Redraw(scr tcell.Screen) {
 	after := 0
 	lines := len(self.tb.lines)
 	if end >= lines {
+		after = end - lines
 		end = lines
-		after = lines - end
 	}
 	col := self.viewport.X + self.lineNumbersWidth + 1
 	begin := self.scroll

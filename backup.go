@@ -166,7 +166,7 @@ func (self *Backup) ForEach(f backupForEachCallback) {
 	lineNumbers := []int{}
 	lines := []string{}
 	for len(self.lines) != 0 {
-		line, self.lines = util.Xxs(self.lines)
+		line, self.lines = util.PopFront(self.lines)
 		pathname := line.text
 		stat, err := statAndCheck(pathname)
 		if err != nil {
@@ -177,7 +177,7 @@ func (self *Backup) ForEach(f backupForEachCallback) {
 		lineNumbers = lineNumbers[:0]
 		lines = lines[:0]
 		for len(self.lines) != 0 && !self.lines[0].isFile {
-			line, self.lines = util.Xxs(self.lines)
+			line, self.lines = util.PopFront(self.lines)
 			lineNumbers = append(lineNumbers, line.line)
 			lines = append(lines, line.text)
 		}

@@ -56,8 +56,17 @@ type SliceIndex struct {
 	line, slice int
 }
 
+func NewSliceIndex(line, slice int) SliceIndex {
+	return SliceIndex{line, slice}
+}
+
 func (self *SliceIndex) Line() int {
 	return self.line
+}
+
+// IsAfter returns true if this slice is equal to or after the given slice.
+func (self *SliceIndex) IsAfter(other SliceIndex) bool {
+	return self.line > other.line || (self.line == other.line && self.slice >= other.slice)
 }
 
 // TextBuffer holds lines of text that are themselves split into slices.

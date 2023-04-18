@@ -51,17 +51,17 @@ type Menu struct {
 }
 
 func NewMenu(preferredLocation, rows, cols int) Menu {
-	columns := NewColumns(
+	list := NewListView(
 		cols,
 		None[int](),
 		true,
 		false,
 		Colors.Menu,
 	)
-	columns.AlwaysShowSelection = true
-	columns.AddGroup(rows)
+	list.AlwaysShowSelection = true
+	list.AddGroup(rows)
 	return Menu{
-		list:              columns,
+		list:              list,
 		preferredLocation: preferredLocation,
 	}
 }
@@ -79,6 +79,7 @@ func (self *Menu) SetItems(items []string) {
 		}
 		self.list.AddItem(0, i, key, item)
 	}
+	self.list.ResetSelection()
 	self.viewport.Width = self.list.Width()
 	self.viewport.Height = self.list.Height()
 }
