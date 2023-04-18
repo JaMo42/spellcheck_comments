@@ -15,7 +15,7 @@ var cCommentStyle = CommentStyle{
 
 // newToken creates a new token without location info.
 func newToken(kind TokenKindType, text ...string) Token {
-	return Token{kind, 0, 0, strings.Join(text[:], "")}
+	return Token{kind, strings.Join(text[:], "")}
 }
 
 // tokenInfoEq checks if the kind and text of two tokens are equal

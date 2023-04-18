@@ -55,10 +55,8 @@ func LexerTokenKindName(kind TokenKindType) string {
 }
 
 type Token struct {
-	kind   TokenKindType
-	line   int
-	column int
-	text   string
+	kind TokenKindType
+	text string
 }
 
 // String returns a string to display the token, use Text() to get the tokens
@@ -69,11 +67,6 @@ func (self *Token) String() string {
 		LexerTokenKindName(self.kind),
 		strings.ReplaceAll(self.text, "\x1b", "\\e"),
 	)
-}
-
-func (self Token) WithColumn(column int) Token {
-	self.column = column
-	return self
 }
 
 func (self *Token) Kind() TokenKindType {
@@ -87,8 +80,6 @@ func (self *Token) Text() string {
 type Lexer struct {
 	source       []rune
 	used         int
-	line         int
-	column       int
 	dfa          Dfa
 	state        int
 	commentState Optional[State]
@@ -98,7 +89,6 @@ type Lexer struct {
 }
 
 func buildDfa(style CommentStyle) Dfa {
-	// TODO: could cache these but it's probably not worth it
 	dfa := NewDfa()
 	inCodeState := dfa.AddState(lexStateInCode)
 	inEscapeState := dfa.AddState(lexStateInEscape)
@@ -141,8 +131,6 @@ func NewLexer(source string, commentStyle CommentStyle) Lexer {
 		// line or column information at all and could just use bytes.
 		runes,
 		0,
-		0,
-		0,
 		dfa,
 		lexStateInCode,
 		None[State](),
@@ -177,10 +165,6 @@ func (self *Lexer) createToken(kind TokenKindType) Optional[Token] {
 	text := self.consume(self.used)
 	return Some(Token{
 		kind,
-		self.line,
-		// Since newlines are also tokens we don't need to check whether we
-		// cross one here.
-		self.column - len([]rune(text)),
 		text,
 	})
 }
@@ -189,8 +173,6 @@ func (self *Lexer) createToken(kind TokenKindType) Optional[Token] {
 func (self *Lexer) createMarker(kind TokenKindType) Token {
 	return Token{
 		kind,
-		self.line,
-		self.column,
 		"",
 	}
 }
@@ -233,7 +215,6 @@ func (self *Lexer) getNextTokens() {
 	// Note: regarding the doc comment, we do not stop once we have a token
 	// inside a comment but only on a state change of the DFA.
 	addToken := func(t Token) {
-		t.column -= self.used
 		self.nextTokens = append(self.nextTokens, t)
 	}
 	lastState := self.dfa.CurrentState()
@@ -244,7 +225,6 @@ func (self *Lexer) getNextTokens() {
 	for {
 		char := self.source[self.used]
 		self.used++
-		self.column++
 		if self.state == lexStateInComment {
 			self.processInComment(char)
 		}
@@ -302,8 +282,6 @@ func (self *Lexer) getNextTokens() {
 				self.createToken(TokenKind.Code).Then(addToken)
 				self.drop(1)
 				addToken(self.createMarker(TokenKind.Newline))
-				self.line++
-				self.column = 0
 			}
 			break
 		}
