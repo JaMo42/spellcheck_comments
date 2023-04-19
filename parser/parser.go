@@ -45,6 +45,7 @@ func Parse(
 	commentStyle CommentStyle,
 	speller aspell.Speller,
 	cfg *Config,
+	ignoreList *IgnoreList,
 	useDefaultCommentColor bool,
 ) sf.SourceFile {
 	_lexer := NewLexer(source, commentStyle)
@@ -78,7 +79,10 @@ loop:
 
 		case TokenKind.CommentWord:
 			idx := tb.AddSlice(tok.text)
-			if IsWord(tok.text) && !speller.Check(tok.text) && Filter(tok.text, filters) {
+			if IsWord(tok.text) &&
+				!ignoreList.Ignore(tok.text) &&
+				!speller.Check(tok.text) &&
+				Filter(tok.text, filters) {
 				words = append(words, sf.NewWord(tok.text, nil, idx))
 			}
 

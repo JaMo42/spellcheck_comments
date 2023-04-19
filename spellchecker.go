@@ -5,6 +5,7 @@ import (
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/trustmaster/go-aspell"
+	"golang.org/x/text/cases"
 
 	. "github.com/JaMo42/spellcheck_comments/common"
 	. "github.com/JaMo42/spellcheck_comments/source_file"
@@ -39,6 +40,7 @@ type SpellChecker struct {
 	discardAll bool
 	doBackup   bool
 	files      []FileContext
+	caser      *cases.Caser
 }
 
 func NewSpellChecker(
@@ -62,6 +64,11 @@ func NewSpellChecker(
 		key := rune('0' + (i+1)%10)
 		ui.SetKey(key, ActionSelectSuggestion{i})
 	}
+	var caser *cases.Caser
+	if cfg.General.IgnoreCase {
+		caser = new(cases.Caser)
+		*caser = cases.Fold()
+	}
 	return SpellChecker{
 		scr:          scr,
 		ui:           ui,
@@ -71,13 +78,23 @@ func NewSpellChecker(
 		replacements: make(map[string]string),
 		replaced:     make(map[tui.SliceIndex]bool),
 		doBackup:     cfg.General.Backup || options.backup,
+		caser:        caser,
 	}
+}
+
+// transform applies case folding if enabled.
+func (self *SpellChecker) transform(word string) string {
+	if self.caser != nil {
+		word = self.caser.String(word)
+	}
+	return word
 }
 
 // replaceAllInFile replaces all occurrences of a word in the current file.
 func (self *SpellChecker) replaceAllInFile(file *FileContext, from string, to string, after tui.SliceIndex) {
+	from = self.transform(from)
 	for _, word := range file.Source().Words() {
-		if word.Index.IsAfter(after) && word.Original == from {
+		if word.Index.IsAfter(after) && self.transform(word.Original) == from {
 			self.replaced[word.Index] = true
 			file.Change(word.Index, to)
 		}
@@ -98,7 +115,7 @@ func (self *SpellChecker) CheckFile(sf SourceFile) bool {
 	}
 	for maybeWord := sf.NextWord(); maybeWord.IsSome(); maybeWord = sf.NextWord() {
 		word := maybeWord.Get()
-		if self.ignore[word.Original] || self.replaced[word.Index] {
+		if self.ignore[self.transform(word.Original)] || self.replaced[word.Index] {
 			continue
 		}
 		suggestions := self.speller.Suggest(word.Original)
@@ -116,12 +133,14 @@ func (self *SpellChecker) CheckFile(sf SourceFile) bool {
 			if action.index >= len(suggestions) {
 				goto repeatKey
 			}
-			file.Change(word.Index, suggestions[action.index])
+			replacement := suggestions[action.index]
+			file.Change(word.Index, replacement)
+			self.speller.Replace(word.Original, replacement)
 			self.changed = true
 
 		case ActionIgnore:
 			if action.all {
-				self.ignore[word.Original] = true
+				self.ignore[self.transform(word.Original)] = true
 			}
 
 		case ActionReplace:
@@ -145,6 +164,7 @@ func (self *SpellChecker) CheckFile(sf SourceFile) bool {
 				} else {
 					file.Change(word.Index, text)
 				}
+				self.speller.Replace(word.Original, text)
 				self.changed = true
 			} else {
 				goto repeatKey

@@ -19,12 +19,13 @@ type CfgGeneral struct {
 	DimCode           bool     `toml:"dim-code"`
 	BoxStyle          string   `toml:"box-style"`
 	ItalicToUnderline bool     `toml:"italic-to-underline"`
-	Language          string   `toml:"language"`
 	Layout            string   `toml:"layout"`
 	Mouse             bool     `toml:"mouse"`
 	TabSize           int      `toml:"tab-size"`
 	Filters           []string `toml:"filters"`
 	Backup            bool     `toml:"backup"`
+	IgnoreCase        bool     `toml:"ignore-case"`
+	IgnoreLists       []string `toml:"ignore-lists"`
 }
 
 type CfgColors struct {
@@ -36,10 +37,11 @@ type CfgColors struct {
 }
 
 type Config struct {
-	Extensions map[string][]string
-	Styles     map[string]CommentStyle
-	General    CfgGeneral
-	Colors     CfgColors
+	Extensions    map[string][]string
+	Styles        map[string]CommentStyle
+	General       CfgGeneral
+	Colors        CfgColors
+	AspellOptions map[string]string `toml:"aspell-options"`
 }
 
 func DefaultConfig() Config {
@@ -49,12 +51,13 @@ func DefaultConfig() Config {
 			DimCode:           true,
 			BoxStyle:          "rounded",
 			ItalicToUnderline: false,
-			Language:          "en_US",
 			Layout:            "default",
 			Mouse:             true,
 			TabSize:           4,
 			Filters:           []string{},
 			Backup:            true,
+			IgnoreCase:        true,
+			IgnoreLists:       []string{".spellcheck_comments_ignorelist"},
 		},
 		Colors: CfgColors{
 			Comment:           commentColorDefault,
@@ -104,8 +107,5 @@ func (self *Config) GetStyle(extension string) CommentStyle {
 }
 
 func (self *Config) Aspell() map[string]string {
-	return map[string]string{
-		"lang":         self.General.Language,
-		"run-together": "true",
-	}
+	return self.AspellOptions
 }

@@ -59,6 +59,16 @@ func PopFront[T any](arr []T) (T, []T) {
 	return x, xs
 }
 
+// PopFrontOrDefault pops the first value from the given slice. If the slice
+// is empty the zero value for the type is returned.
+func PopFrontOrDefault[T any](arr []T) (T, []T) {
+	if len(arr) == 0 {
+		var def T
+		return def, arr
+	}
+	return PopFront(arr)
+}
+
 // Back returns a pointer to the last element in the slice.
 func Back[T any](arr []T) *T {
 	return &arr[len(arr)-1]

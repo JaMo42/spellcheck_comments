@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"flag"
 	"fmt"
 	"log"
@@ -22,7 +23,7 @@ import (
 
 const (
 	appName    = "spellcheck_comments"
-	appVersion = "0.1.0"
+	appVersion = "0.2.0"
 )
 
 type Options struct {
@@ -221,14 +222,28 @@ func globalControls() []tui.KeyAction {
 	}
 }
 
-func parseFiles(names []string, cfg *Config, speller aspell.Speller, out chan sf.SourceFile) {
+func parseFiles(
+	names []string,
+	cfg *Config,
+	speller aspell.Speller,
+	ignoreList *IgnoreList,
+	out chan sf.SourceFile,
+) {
 	for _, filename := range names {
 		highlit, failed := highlight(filename, cfg)
 		if len(highlit) == 0 {
 			continue
 		}
 		style := cfg.GetStyle(fileExtension(filename))
-		sf := parser.Parse(filename, highlit, style, speller, cfg, failed)
+		sf := parser.Parse(
+			filename,
+			highlit,
+			style,
+			speller,
+			cfg,
+			ignoreList,
+			failed,
+		)
 		if !sf.Ok() {
 			out <- sf
 		}
@@ -236,7 +251,12 @@ func parseFiles(names []string, cfg *Config, speller aspell.Speller, out chan sf
 	close(out)
 }
 
-func configPath() (string, bool) {
+type Paths struct {
+	ConfigFile string
+	ConfigDir  string
+}
+
+func configPath() (Paths, bool) {
 	configHome := os.Getenv("XDG_CONFIG_HOME")
 	if len(configHome) == 0 {
 		home := os.Getenv("HOME")
@@ -244,11 +264,58 @@ func configPath() (string, bool) {
 			home = os.Getenv("Home")
 		}
 		if len(home) == 0 {
-			return "", false
+			return Paths{}, false
 		}
 		configHome = fmt.Sprintf("%s/.config", home)
 	}
-	return filepath.Join(configHome, "spellcheck_comments.toml"), true
+	locations := []struct{ dir, file string }{
+		{
+			configHome,
+			fmt.Sprintf("%s/spellcheck_comments.toml", configHome),
+		},
+		{
+			fmt.Sprintf("%s/spellcheck_comments", configHome),
+			fmt.Sprintf("%s/spellcheck_comments/config.toml", configHome),
+		},
+	}
+	for _, location := range locations {
+		stat, err := os.Stat(location.file)
+		if err == nil && !stat.IsDir() {
+			return Paths{location.file, location.dir}, true
+		}
+	}
+	return Paths{}, false
+}
+
+func collectIgnoreLists(configPath Optional[string], cfg *Config) IgnoreList {
+	dirs := []string{}
+	if cwd, err := os.Getwd(); err == nil {
+		dirs = append(dirs, cwd)
+	}
+	configPath.Then(func(path string) {
+		dirs = append(dirs, path)
+	})
+	list := NewIgnoreList(cfg.General.IgnoreCase)
+	list.Add("todo")
+	list.Add("fixme")
+	for _, filename := range cfg.General.IgnoreLists {
+		for _, dir := range dirs {
+			pathname := fmt.Sprintf("%s/%s", dir, filename)
+			file, err := os.Open(pathname)
+			if err != nil {
+				continue
+			}
+			scanner := bufio.NewScanner(file)
+			scanner.Split(bufio.ScanLines)
+			for scanner.Scan() {
+				word := scanner.Text()
+				if len(word) > 1 {
+					list.Add(word)
+				}
+			}
+		}
+	}
+	return list
 }
 
 func main() {
@@ -261,12 +328,15 @@ func main() {
 		BackupRestoreAll()
 		return
 	}
+	paths, haveConfig := configPath()
 	var cfg Config
-	if path, ok := configPath(); ok {
-		cfg = LoadConfig(path)
+	if haveConfig {
+		cfg = LoadConfig(paths.ConfigFile)
 	} else {
 		cfg = DefaultConfig()
 	}
+
+	ignoreList := collectIgnoreLists(Some(paths.ConfigDir).Filter(haveConfig), &cfg)
 
 	files := getFiles(args, fileFilter(&cfg, &options))
 	if len(files) == 0 {
@@ -287,7 +357,7 @@ func main() {
 	checker := NewSpellChecker(scr, speller, &cfg, &options)
 
 	sourceFiles := make(chan sf.SourceFile)
-	go parseFiles(files, &cfg, speller, sourceFiles)
+	go parseFiles(files, &cfg, speller, &ignoreList, sourceFiles)
 
 	allOk := true
 	for sf := range sourceFiles {

@@ -72,3 +72,9 @@ func (self Optional[T]) Else(f func()) {
 		f()
 	}
 }
+
+// Filter clears the optional is keep is false.
+func (self Optional[T]) Filter(keep bool) Optional[T] {
+	self.isSome = keep
+	return self
+}

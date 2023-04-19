@@ -213,16 +213,16 @@ func getColor(tok int, tokens []int, style tcell.Style) (tcell.Style, []int) {
 	}
 	if tok == 38 || tok == 48 {
 		isBackground = tok == 48
-		tok, tokens = util.PopFront(tokens)
+		tok, tokens = util.PopFrontOrDefault(tokens)
 		if tok == 5 {
 			var index int
-			index, tokens = util.PopFront(tokens)
+			index, tokens = util.PopFrontOrDefault(tokens)
 			color = tcell.PaletteColor(index)
 		} else if tok == 2 {
 			var red, green, blue int
-			red, tokens = util.PopFront(tokens)
-			green, tokens = util.PopFront(tokens)
-			blue, tokens = util.PopFront(tokens)
+			red, tokens = util.PopFrontOrDefault(tokens)
+			green, tokens = util.PopFrontOrDefault(tokens)
+			blue, tokens = util.PopFrontOrDefault(tokens)
 			color = tcell.NewRGBColor(int32(red), int32(green), int32(blue))
 		}
 		// silently ignore invalid color type
