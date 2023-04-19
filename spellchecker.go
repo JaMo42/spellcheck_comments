@@ -14,6 +14,7 @@ import (
 
 type ActionIgnore struct{ all bool }
 type ActionReplace struct{ all bool }
+type ActionSkip struct{}
 type ActionExit struct{}
 type ActionAbort struct{}
 type ActionSelectSuggestion struct{ index int }
@@ -169,6 +170,9 @@ func (self *SpellChecker) CheckFile(sf SourceFile) bool {
 			} else {
 				goto repeatKey
 			}
+
+		case ActionSkip:
+			return false
 
 		case ActionAbort:
 			if !self.changed ||

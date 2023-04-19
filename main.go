@@ -84,6 +84,8 @@ func parseArgs() (Options, []string) {
 	return options, flag.Args()
 }
 
+// discover walks a directory tree, adding all files matching the filter to the
+// files list. filter is the same as in getFiles.
 func discover(files []string, dir string, filter func(string, bool) bool) []string {
 	dirContent, _ := os.ReadDir(dir)
 	for _, file := range dirContent {
@@ -97,6 +99,11 @@ func discover(files []string, dir string, filter func(string, bool) bool) []stri
 	return files
 }
 
+// getFiles gets the list of files based on the arguments. If an argument
+// specifies a file it is added to the list if it matches the filter.
+// If it specified a directory it is recursively traversed, adding all files
+// matching the filter. The filter receives the name if the file and whether it
+// was an argument or found during directory discovery.
 func getFiles(args []string, filter func(string, bool) bool) []string {
 	files := []string{}
 	if len(args) == 0 {
@@ -118,6 +125,9 @@ func getFiles(args []string, filter func(string, bool) bool) []string {
 	return files
 }
 
+// fileFilter returns a filter for use in the getFiles function. The returned
+// filter checks if  a comment style is defined for the files extension and
+// whether it matches the glob filter option, if provided.
 func fileFilter(cfg *Config, options *Options) func(filename string, direct bool) bool {
 	extensionFilter := func(filename string, _ bool) bool {
 		ext := fileExtension(filename)
@@ -151,6 +161,7 @@ func fileFilter(cfg *Config, options *Options) func(filename string, direct bool
 	}
 }
 
+// noHighlight is the error case for the highlight function.
 func noHighlight(filename string) (string, bool) {
 	content, err := os.ReadFile(filename)
 	if err != nil {
@@ -159,6 +170,10 @@ func noHighlight(filename string) (string, bool) {
 	return string(content), true
 }
 
+// highlight attempts to highlight a file using the highlighters defined in the
+// config. If no highlighter is capable of highlighting the file the raw
+// contents are returned. If the file cannot be read for any reason an empty
+// string is returned. The returned bool is true if highlighting failed.
 func highlight(filename string, cfg *Config) (string, bool) {
 	if len(cfg.General.HighlightCommands) == 0 {
 		return noHighlight(filename)
@@ -217,6 +232,7 @@ func globalControls() []tui.KeyAction {
 		x('I', "Ignore all", ActionIgnore{true}),
 		x('r', "Replace", ActionReplace{false}),
 		x('R', "Replace all", ActionReplace{true}),
+		x('s', "Skip rest of file", ActionSkip{}),
 		x('x', "Exit", ActionExit{}),
 		x('b', "Abort", ActionAbort{}),
 	}
@@ -253,9 +269,10 @@ func parseFiles(
 
 type Paths struct {
 	ConfigFile string
-	ConfigDir  string
+	ConfigDir  Optional[string]
 }
 
+// configPath returns the path and directory of the config file.
 func configPath() (Paths, bool) {
 	configHome := os.Getenv("XDG_CONFIG_HOME")
 	if len(configHome) == 0 {
@@ -281,12 +298,13 @@ func configPath() (Paths, bool) {
 	for _, location := range locations {
 		stat, err := os.Stat(location.file)
 		if err == nil && !stat.IsDir() {
-			return Paths{location.file, location.dir}, true
+			return Paths{location.file, Some(location.dir)}, true
 		}
 	}
 	return Paths{}, false
 }
 
+// collectIgnoreLists creates the ignore list from all ignore list fiels to use.
 func collectIgnoreLists(configPath Optional[string], cfg *Config) IgnoreList {
 	dirs := []string{}
 	if cwd, err := os.Getwd(); err == nil {
@@ -334,9 +352,10 @@ func main() {
 		cfg = LoadConfig(paths.ConfigFile)
 	} else {
 		cfg = DefaultConfig()
+		// TODO: define some builtin comment styless owe can run without a config
 	}
 
-	ignoreList := collectIgnoreLists(Some(paths.ConfigDir).Filter(haveConfig), &cfg)
+	ignoreList := collectIgnoreLists(paths.ConfigDir, &cfg)
 
 	files := getFiles(args, fileFilter(&cfg, &options))
 	if len(files) == 0 {
