@@ -6,16 +6,6 @@ import (
 	. "github.com/JaMo42/spellcheck_comments/common"
 )
 
-type DockItem struct {
-	text string
-	key  Optional[string]
-}
-
-type dockColumn struct {
-	items      []Optional[int]
-	itemsWidth int
-}
-
 type Dock struct {
 	list     ListView
 	vAlign   int

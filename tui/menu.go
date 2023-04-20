@@ -9,21 +9,6 @@ import (
 	"github.com/JaMo42/spellcheck_comments/util"
 )
 
-type menuColumn struct {
-	items      []int
-	itemsWidth int
-	isLast     bool
-}
-
-func (self *menuColumn) Push(idx int, width int) {
-	self.items = append(self.items, idx)
-	self.itemsWidth = util.Max(self.itemsWidth, width)
-}
-
-func (self *menuColumn) Width() int {
-	return 2 + self.itemsWidth
-}
-
 var MenuLocation = struct {
 	Right      int
 	Below      int
@@ -114,10 +99,10 @@ func (self *Menu) SetPosition(x, y, wordWidth int, inside Rectangle, updatePos b
 	}
 }
 
-// Attempts to evade rect while staying inside inside. The resulting viewport
-// will always be inside inside but it cannot guarantee that rect will always
-// be evaded. If the menu needs to go above the word, the lines that need to be
-// visible above the words line are returned.
+// Evade attempts to evade rect while staying inside inside. The resulting
+// viewport will always be inside inside but it cannot guarantee that rect will
+// always be evaded. If the menu needs to go above the word, the lines that need
+// to be visible above the words line are returned.
 // NOTE: rect is assumed to be to the bottom right of the menu.
 func (self *Menu) Evade(rect, inside Rectangle) Optional[int] {
 	oldX := self.viewport.X

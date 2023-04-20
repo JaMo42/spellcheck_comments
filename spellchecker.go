@@ -22,6 +22,7 @@ type ActionExit struct{}
 type ActionAbort struct{}
 
 type Layout interface {
+	Configure(*Config)
 	SetSource(*SourceFile)
 	Show(tui.SliceIndex)
 	SetSuggestions([]string)
@@ -77,6 +78,7 @@ func NewSpellChecker(
 	default:
 		layout = new(DefaultLayout)
 	}
+	layout.Configure(cfg)
 	ui := tui.NewTui(scr, layout.(tui.Layout))
 	ui.SetArrowReceiver(layout.ArrowReceiver())
 	ui.SetMouseReceivers(layout.MouseReceivers())

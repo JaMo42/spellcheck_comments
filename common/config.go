@@ -26,6 +26,7 @@ type CfgGeneral struct {
 	Backup            bool     `toml:"backup"`
 	IgnoreCase        bool     `toml:"ignore-case"`
 	IgnoreLists       []string `toml:"ignore-lists"`
+	BottomStatus      bool     `toml:"bottom-status"`
 }
 
 type CfgColors struct {
@@ -34,6 +35,7 @@ type CfgColors struct {
 	CurrentLineNumber string `toml:"current-line-number"`
 	BoxOutline        string `toml:"box-outline"`
 	Menu              string `toml:"menu"`
+	StatusBar         string `toml:"status-bar"`
 }
 
 type Config struct {
@@ -58,6 +60,7 @@ func DefaultConfig() Config {
 			Backup:            true,
 			IgnoreCase:        true,
 			IgnoreLists:       []string{".spellcheck_comments_ignorelist"},
+			BottomStatus:      false,
 		},
 		Colors: CfgColors{
 			Comment:           commentColorDefault,
@@ -65,6 +68,7 @@ func DefaultConfig() Config {
 			CurrentLineNumber: "\x1b[38;5;251m",
 			BoxOutline:        "\x1b[38;5;213m",
 			Menu:              "\x1b[48;5;61;38;5;232m",
+			StatusBar:         "\x1b[38;5;251;7m",
 		},
 	}
 }

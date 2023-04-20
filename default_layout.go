@@ -1,6 +1,9 @@
 package main
 
 import (
+	"fmt"
+	"path/filepath"
+
 	"github.com/gdamore/tcell/v2"
 
 	. "github.com/JaMo42/spellcheck_comments/common"
@@ -10,19 +13,21 @@ import (
 
 type DefaultLayout struct {
 	highlight     tui.SliceIndex
+	bottomStatus  bool
 	source        tui.TextBufferView
 	pmenu         tui.Menu
 	menuContainer tui.MenuContainer
 	globalKeys    tui.Dock
+	statusBar     tui.StatusBar
+}
+
+func (self *DefaultLayout) Configure(cfg *Config) {
+	self.bottomStatus = cfg.General.BottomStatus
 }
 
 func (self *DefaultLayout) SetSource(sf *SourceFile) {
 	self.source.SetTextBuffer(sf.Text())
-	// Unwrap is safe here as we already skipped the file if it has no wrong words
-	self.highlight = sf.PeekWord().Unwrap().Index
-	// In the first call to Show ReverseColors will be called twice on the same
-	// slice so it needs to already be reversed.
-	sf.Text().GetSlice(self.highlight).ReverseColors()
+	self.statusBar.SetLeft(filepath.Clean(sf.Name()))
 }
 
 func (self *DefaultLayout) Show(index tui.SliceIndex) {
@@ -62,10 +67,18 @@ func (self *DefaultLayout) Create() {
 	self.globalKeys.TranslateAction(func(_, item int) any {
 		return globalControls[item].Action()
 	})
+	self.statusBar = tui.NewStausBar()
+	self.statusBar.SetRight(fmt.Sprintf("%s %s", appName, appVersion))
 }
 
 func (self *DefaultLayout) Layout(width, height int) {
-	screen := tui.NewRectangle(0, 0, width, height)
+	screen := tui.NewRectangle(0, 0, width, height-1)
+	if !self.bottomStatus {
+		screen.Y++
+		self.statusBar.Viewport(0, width)
+	} else {
+		self.statusBar.Viewport(height-1, width)
+	}
 	self.source.SetViewport(screen)
 	self.menuContainer.SetViewport(screen)
 	self.globalKeys.SetViewport(screen)
@@ -74,10 +87,16 @@ func (self *DefaultLayout) Layout(width, height int) {
 
 func (self *DefaultLayout) Update(scr tcell.Screen, widget any) {
 	if widget == nil {
+		// We only highlight the current slice on demand so we don't need to
+		// worry about any state.
+		text := self.source.Text()
+		text.GetSlice(self.highlight).ReverseColors()
 		self.source.Redraw(scr)
+		text.GetSlice(self.highlight).ReverseColors()
 		self.globalKeys.Redraw(scr)
 		self.pmenu.Redraw(scr)
 		self.source.UpdateSlice(scr, self.highlight)
+		self.statusBar.Redraw(scr)
 	} else if widget == &self.pmenu {
 		self.pmenu.Redraw(scr)
 	} else if widget == &self.globalKeys {

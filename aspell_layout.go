@@ -1,8 +1,12 @@
 package main
 
 import (
+	"fmt"
+	"path/filepath"
+
 	"github.com/gdamore/tcell/v2"
 
+	. "github.com/JaMo42/spellcheck_comments/common"
 	. "github.com/JaMo42/spellcheck_comments/source_file"
 	"github.com/JaMo42/spellcheck_comments/tui"
 	"github.com/JaMo42/spellcheck_comments/util"
@@ -27,23 +31,24 @@ func AsRows[T any](items []T, columns int) []T {
 }
 
 type AspellLayout struct {
-	highlight tui.SliceIndex
-	source    tui.TextBufferView
-	dock      tui.Dock
+	highlight    tui.SliceIndex
+	bottomStatus bool
+	source       tui.TextBufferView
+	dock         tui.Dock
+	statusBar    tui.StatusBar
+}
+
+func (self *AspellLayout) Configure(cfg *Config) {
+	self.bottomStatus = cfg.General.BottomStatus
 }
 
 func (self *AspellLayout) SetSource(sf *SourceFile) {
-	text := sf.Text()
-	self.source.SetTextBuffer(text)
-	self.highlight = sf.PeekWord().Unwrap().Index
-	//text.GetSlice(self.highlight).ReverseColors()
+	self.source.SetTextBuffer(sf.Text())
+	self.statusBar.SetLeft(filepath.Clean(sf.Name()))
 }
 
 func (self *AspellLayout) Show(index tui.SliceIndex) {
 	self.source.ScrollTo(index.Line(), 5, false)
-	//text := self.source.Text()
-	//text.GetSlice(self.highlight).ReverseColors()
-	//text.GetSlice(index).ReverseColors()
 	self.highlight = index
 }
 
@@ -76,10 +81,18 @@ func (self *AspellLayout) Create() {
 		}
 	})
 	self.dock.AlwaysShowSelection(true)
+	self.statusBar = tui.NewStausBar()
+	self.statusBar.SetRight(fmt.Sprintf("%s %s", appName, appVersion))
 }
 
 func (self *AspellLayout) Layout(width, height int) {
-	screen := tui.NewRectangle(0, 0, width, height)
+	screen := tui.NewRectangle(0, 0, width, height-1)
+	if !self.bottomStatus {
+		screen.Y++
+		self.statusBar.Viewport(0, width)
+	} else {
+		self.statusBar.Viewport(height-1, width)
+	}
 	self.dock.SetViewport(screen)
 	screen.Height = self.dock.Rect().Y
 	self.source.SetViewport(screen)
@@ -91,6 +104,7 @@ func (self *AspellLayout) Update(scr tcell.Screen, widget any) {
 		text.GetSlice(self.highlight).ReverseColors()
 		self.source.Redraw(scr)
 		text.GetSlice(self.highlight).ReverseColors()
+		self.statusBar.Redraw(scr)
 	}
 	self.dock.Redraw(scr)
 }

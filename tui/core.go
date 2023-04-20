@@ -30,8 +30,10 @@ var (
 		LineNumber,
 		CurrentLineNumber,
 		BoxOutline,
-		Menu tcell.Style
+		Menu,
+		StatusBar tcell.Style
 	}{
+		tcell.StyleDefault,
 		tcell.StyleDefault,
 		tcell.StyleDefault,
 		tcell.StyleDefault,
@@ -124,6 +126,7 @@ func Init(cfg *Config) tcell.Screen {
 	Colors.CurrentLineNumber = Ansi2Style(cfg.Colors.CurrentLineNumber)
 	Colors.BoxOutline = Ansi2Style(cfg.Colors.BoxOutline)
 	Colors.Menu = Ansi2Style(cfg.Colors.Menu)
+	Colors.StatusBar = Ansi2Style(cfg.Colors.StatusBar)
 	return scr
 }
 
@@ -318,7 +321,7 @@ func alignAxis(avail, use, alignment int) (int, int) {
 	panic("unreachable")
 }
 
-// TranslateControl gets the key and rune from the given event, translating
+// TranslateControls gets the key and rune from the given event, translating
 // upper and lowercase HJKL to arrow keys. Additionally converts space to enter.
 func TranslateControls(ev *tcell.EventKey) (tcell.Key, rune) {
 	if ev.Key() == tcell.KeyRune {
