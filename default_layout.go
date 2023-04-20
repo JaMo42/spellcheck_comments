@@ -35,9 +35,10 @@ func (self *DefaultLayout) Show(index tui.SliceIndex) {
 	tb := self.source.Text()
 	slice := tb.GetSlice(index)
 	x, y := self.source.SlicePosition(index)
+	if !self.bottomStatus {
+		y--
+	}
 	self.menuContainer.SetMenuPosition(x, y, slice.Width())
-	tb.GetSlice(self.highlight).ReverseColors()
-	slice.ReverseColors()
 	self.highlight = index
 }
 
