@@ -38,7 +38,9 @@ func (self *DefaultLayout) Show(index tui.SliceIndex) {
 	if !self.bottomStatus {
 		y--
 	}
-	self.menuContainer.SetMenuPosition(x, y, slice.Width())
+	self.menuContainer.SetMenuPosition(x, y, slice.Width()).Then(func(above int) {
+		self.source.ScrollTo(index.Line(), above, true)
+	})
 	self.highlight = index
 }
 
@@ -51,13 +53,21 @@ func (self *DefaultLayout) ArrowReceiver() tui.ArrowReceiver {
 }
 
 func (self *DefaultLayout) MouseReceivers() []tui.MouseReceiver {
-	return []tui.MouseReceiver{&self.pmenu, &self.globalKeys}
+	// Note: the order is intentional here, if they end up overlapping the last
+	// element in this list will take "precedence" for motion drawing and click
+	// order. Note that this is not a layering system but just how the tui is
+	// implemented.
+	return []tui.MouseReceiver{&self.globalKeys, &self.pmenu}
 }
 
 func (self *DefaultLayout) Create() {
 	globalControls := globalControls()
 	self.source = tui.NewTextBufferView()
-	self.pmenu = tui.NewMenu(tui.MenuLocation.Below, 5, 2)
+	topGap := 0
+	if !self.bottomStatus {
+		topGap = 1
+	}
+	self.pmenu = tui.NewMenu(tui.MenuLocation.Below, 5, 2, topGap)
 	self.menuContainer = tui.NewMenuContainer()
 	self.menuContainer.SetMenu(&self.pmenu)
 	self.globalKeys = tui.NewDock(tui.Alignment.End, tui.Alignment.End, 1, 0, len(globalControls))
@@ -83,7 +93,9 @@ func (self *DefaultLayout) Layout(width, height int) {
 	self.source.SetViewport(screen)
 	self.menuContainer.SetViewport(screen)
 	self.globalKeys.SetViewport(screen)
-	self.menuContainer.SetEvade(Some(self.globalKeys.Rect()))
+	self.menuContainer.SetEvade(Some(self.globalKeys.Rect())).Then(func(above int) {
+		self.source.ScrollTo(self.highlight.Line(), above, true)
+	})
 }
 
 func (self *DefaultLayout) Update(scr tcell.Screen, widget any) {
@@ -93,10 +105,10 @@ func (self *DefaultLayout) Update(scr tcell.Screen, widget any) {
 		text := self.source.Text()
 		text.GetSlice(self.highlight).ReverseColors()
 		self.source.Redraw(scr)
-		text.GetSlice(self.highlight).ReverseColors()
 		self.globalKeys.Redraw(scr)
 		self.pmenu.Redraw(scr)
 		self.source.UpdateSlice(scr, self.highlight)
+		text.GetSlice(self.highlight).ReverseColors()
 		self.statusBar.Redraw(scr)
 	} else if widget == &self.pmenu {
 		self.pmenu.Redraw(scr)

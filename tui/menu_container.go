@@ -21,18 +21,20 @@ func (self *MenuContainer) SetViewport(viewport Rectangle) {
 	self.viewport = viewport
 }
 
-func (self *MenuContainer) doEvade() {
+func (self *MenuContainer) doEvade() Optional[int] {
+	above := None[int]()
 	self.evade.Then(func(rect Rectangle) {
-		self.menu.Evade(rect, self.viewport)
+		above = self.menu.Evade(rect, self.viewport)
 	})
+	return above
 }
 
-func (self *MenuContainer) SetEvade(evade Optional[Rectangle]) {
+func (self *MenuContainer) SetEvade(evade Optional[Rectangle]) Optional[int] {
 	self.evade = evade
-	self.doEvade()
+	return self.doEvade()
 }
 
-func (self *MenuContainer) SetMenuPosition(x, y, wordWidth int) {
+func (self *MenuContainer) SetMenuPosition(x, y, wordWidth int) Optional[int] {
 	self.menu.SetPosition(
 		self.viewport.X+x,
 		self.viewport.Y+y,
@@ -41,4 +43,5 @@ func (self *MenuContainer) SetMenuPosition(x, y, wordWidth int) {
 		!self.evade.IsSome(),
 	)
 	self.doEvade()
+	return self.doEvade()
 }

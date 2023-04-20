@@ -151,10 +151,13 @@ func (self *Tui) mouseEvent(ev *tcell.EventMouse) Optional[any] {
 			}
 		}
 	} else {
-		for _, receiver := range self.mouse {
+		// Should 2 mouse sinks end up overlapping, the one that comes later in
+		// the list will be visible on top so we iterate in reverse here so we
+		// don't end up clicking through that topmost sink.
+		for i := len(self.mouse) - 1; i >= 0; i-- {
 			b := ev.Buttons()
 			x, y := ev.Position()
-			if maybeAction := receiver.Click(x, y, b); maybeAction.IsSome() {
+			if maybeAction := self.mouse[i].Click(x, y, b); maybeAction.IsSome() {
 				return Some(maybeAction.Unwrap())
 			}
 		}

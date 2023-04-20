@@ -33,9 +33,11 @@ type Menu struct {
 	viewport          Rectangle
 	preferredLocation int
 	isBelow           bool
+	topGap            int
+	prefX             int
 }
 
-func NewMenu(preferredLocation, rows, cols int) Menu {
+func NewMenu(preferredLocation, rows, cols, topGap int) Menu {
 	list := NewListView(
 		cols,
 		None[int](),
@@ -48,6 +50,7 @@ func NewMenu(preferredLocation, rows, cols int) Menu {
 	return Menu{
 		list:              list,
 		preferredLocation: preferredLocation,
+		topGap:            topGap,
 	}
 }
 
@@ -94,6 +97,7 @@ func (self *Menu) SetPosition(x, y, wordWidth int, inside Rectangle, updatePos b
 		self.isBelow = true
 	}
 	self.viewport.Clamp(inside)
+	self.prefX = self.viewport.X
 	if updatePos {
 		self.list.SetPosition(self.viewport.X, self.viewport.Y)
 	}
@@ -105,7 +109,6 @@ func (self *Menu) SetPosition(x, y, wordWidth int, inside Rectangle, updatePos b
 // to be visible above the words line are returned.
 // NOTE: rect is assumed to be to the bottom right of the menu.
 func (self *Menu) Evade(rect, inside Rectangle) Optional[int] {
-	oldX := self.viewport.X
 	if self.viewport.Overlaps(rect) {
 		if !self.isBelow {
 			self.viewport.Y++
@@ -115,8 +118,8 @@ func (self *Menu) Evade(rect, inside Rectangle) Optional[int] {
 		self.viewport.Clamp(inside)
 		if self.viewport.Overlaps(rect) {
 			// rect was not successfully evaded, need to go above
-			self.viewport.Y = 1
-			self.viewport.X = oldX
+			self.viewport.Y = self.topGap + 1
+			self.viewport.X = self.prefX
 			self.viewport.Clamp(inside)
 			self.list.SetPosition(self.viewport.X, self.viewport.Y)
 			return Some(self.viewport.Height + 1)
