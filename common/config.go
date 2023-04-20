@@ -2,7 +2,10 @@ package common
 
 import (
 	"errors"
+	"fmt"
 	"os"
+	"sort"
+	"strings"
 
 	"github.com/pelletier/go-toml/v2"
 )
@@ -48,6 +51,8 @@ type Config struct {
 
 func DefaultConfig() Config {
 	return Config{
+		Extensions: make(map[string][]string),
+		Styles:     make(map[string]CommentStyle),
 		General: CfgGeneral{
 			HighlightCommands: []string{},
 			DimCode:           true,
@@ -70,6 +75,7 @@ func DefaultConfig() Config {
 			Menu:              "\x1b[48;5;61;38;5;232m",
 			StatusBar:         "\x1b[38;5;251;7m",
 		},
+		AspellOptions: make(map[string]string),
 	}
 }
 
@@ -112,4 +118,73 @@ func (self *Config) GetStyle(extension string) CommentStyle {
 
 func (self *Config) Aspell() map[string]string {
 	return self.AspellOptions
+}
+
+func (self *Config) DumpStyles() {
+	type Style struct {
+		name  string
+		style CommentStyle
+	}
+	styles := []Style{}
+	for name, style := range self.Styles {
+		styles = append(styles, Style{name, style})
+	}
+	sort.Slice(styles, func(i, j int) bool {
+		a := styles[i].name
+		b := styles[j].name
+		aBuiltin := strings.HasPrefix(a, "builtin")
+		bBuiltin := strings.HasPrefix(b, "builtin")
+		if aBuiltin && !bBuiltin {
+			return true
+		} else if bBuiltin && !aBuiltin {
+			return false
+		}
+		if aBuiltin {
+			a = a[8:]
+			b = b[8:]
+		}
+		return a < b
+	})
+	first := true
+	for _, pair := range styles {
+		name := pair.name
+		style := pair.style
+		if !first {
+			fmt.Println()
+		}
+		first = false
+		fmt.Printf("\x1b[1m%s\x1b[m\n", name)
+		fmt.Print("   Line styles: ")
+		last := len(style.Line) - 1
+		for i, s := range style.Line {
+			fmt.Printf("%s%s\x1b[m", FallbackCommentColor, s)
+			if i != last {
+				fmt.Print(", ")
+			}
+		}
+		fmt.Println()
+		fmt.Print("  Block styles: ")
+		last = len(style.MultiBegin) - 1
+		for i, begin := range style.MultiBegin {
+			end := style.MultiEnd[i]
+			fmt.Printf(
+				"%s%s\x1b[;2m...\x1b[22m%s%s\x1b[m",
+				FallbackCommentColor,
+				begin,
+				FallbackCommentColor,
+				end,
+			)
+			if i != last {
+				fmt.Print(", ")
+			}
+		}
+		fmt.Println()
+		extensions := self.Extensions[name]
+		if len(extensions) == 1 {
+			fmt.Print("     Extension: ")
+		} else {
+			fmt.Print("    Extensions: ")
+		}
+		fmt.Println(strings.Join(self.Extensions[name], ", "))
+	}
 }

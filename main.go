@@ -31,6 +31,7 @@ type Options struct {
 	applyBackup    bool
 	applyBackupAll bool
 	globs          []string
+	dumpStyles     bool
 }
 
 func parseArgs() (Options, []string) {
@@ -62,6 +63,10 @@ func parseArgs() (Options, []string) {
 	)
 	var applyBackupAllAlias bool
 	flag.BoolVar(&applyBackupAllAlias, "B", false, "alias for -apply-backup-all")
+	flag.BoolVar(
+		&options.dumpStyles, "dump-styles", false,
+		"Dump all configured styles to standard output.",
+	)
 	flag.Parse()
 	if showVersion {
 		fmt.Printf("%s %s\n", appName, appVersion)
@@ -353,7 +358,11 @@ func main() {
 		cfg = LoadConfig(paths.ConfigFile)
 	} else {
 		cfg = DefaultConfig()
-		// TODO: define some builtin comment styless owe can run without a config
+	}
+	MergeBuiltinStyles(&cfg)
+	if options.dumpStyles {
+		cfg.DumpStyles()
+		return
 	}
 
 	ignoreList := collectIgnoreLists(paths.ConfigDir, &cfg)
