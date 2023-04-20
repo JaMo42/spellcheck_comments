@@ -116,6 +116,9 @@ loop:
 	}
 	// The last line in the text buffer is just an empty list caused by the
 	// final newline, we remove it so no additional line number is displayed.
+	// This may seem weird but it's what vim does and I think it looks nicer
+	// although it means there is no visual difference between a file with or
+	// without a final newline but this is not a text editor so who cares.
 	tb.RemoveLastLineIfEmpty()
 	// We need to set the slice pointers after building the text buffer as these
 	// point into slices which may be reallocated during creation.

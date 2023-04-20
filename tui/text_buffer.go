@@ -76,8 +76,9 @@ type TextBuffer struct {
 	style tcell.Style
 	// capacity holds the number of bytes of all slices immediately after
 	// their creation. It is not updated if the content of a slice changes.
-	capacity int
-	tabSize  int
+	capacity     int
+	tabSize      int
+	finalNewline bool
 }
 
 func NewTextBuffer(tabSize int) TextBuffer {
@@ -147,6 +148,7 @@ func (self *TextBuffer) Newline() {
 func (self *TextBuffer) RemoveLastLineIfEmpty() {
 	if len(util.Back(self.lines).slices) == 0 {
 		_, self.lines = util.PopBack(self.lines)
+		self.finalNewline = true
 	}
 }
 
@@ -180,14 +182,13 @@ func (self *TextBuffer) RequiredCapacity() int {
 // ForEach calls the given function for each slice and line ending of the text
 // buffer. For newlines it is always called with "\n".
 func (self *TextBuffer) ForEach(f func(string)) {
-	first := true
-	for _, line := range self.lines {
-		if !first {
-			f("\n")
-		}
-		first = false
+	lastLine := len(self.lines) - 1
+	for i, line := range self.lines {
 		for _, slice := range line.slices {
 			f(slice.text)
+		}
+		if i < lastLine || self.finalNewline {
+			f("\n")
 		}
 	}
 }

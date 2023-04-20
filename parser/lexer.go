@@ -91,10 +91,13 @@ type Lexer struct {
 func buildDfa(style CommentStyle) Dfa {
 	dfa := NewDfa()
 	inCodeState := dfa.AddState(lexStateInCode)
+	inCodeState.AddTransition("\n", inCodeState.Id())
 	inEscapeState := dfa.AddState(lexStateInEscape)
 	inCodeState.AddTransition("\x1b", inEscapeState.Id())
 	// We only support SGR sequences so escape sequences always end with `m`.
 	inEscapeState.AddTransition("m", inCodeState.Id())
+	eofState := dfa.AddState(eofStateInfo)
+	inCodeState.AddTransition(string(eofRune), eofState.Id())
 	// All line comment variants can share the same state.
 	// Line comments and block comments use the same info as we only need the
 	// the name to check if we are in any comment state.
@@ -103,6 +106,7 @@ func buildDfa(style CommentStyle) Dfa {
 		inCodeState.AddTransition(token, inLineState.Id())
 		inLineState.AddTransition("\n", inCodeState.Id())
 		inLineState.AddTransition("\x1b", inEscapeState.Id())
+		inLineState.AddTransition(string(eofRune), eofState.Id())
 	}
 	for i, begin := range style.MultiBegin {
 		end := style.MultiEnd[i]
@@ -114,10 +118,8 @@ func buildDfa(style CommentStyle) Dfa {
 		state.AddTransition(end, inCodeState.Id())
 		state.AddTransition("\x1b", inEscapeState.Id())
 		state.AddTransition("\n", state.Id())
+		state.AddTransition(string(eofRune), eofState.Id())
 	}
-	inCodeState.AddTransition("\n", inCodeState.Id())
-	eofState := dfa.AddState(eofStateInfo)
-	inCodeState.AddTransition(string(eofRune), eofState.Id())
 	return dfa
 }
 
