@@ -234,12 +234,12 @@ func (self *SpellChecker) Run() bool {
 			wordId++
 
 		case ActionIgnore:
-			var transformedWord string
+			var original string
 			if action.all {
-				transformedWord = self.transform(word.Original)
-				self.ignore[transformedWord] = true
+				original = self.transform(word.Original)
+				self.ignore[original] = true
 			}
-			addUndoEvent(UndoIgnore{action.all, transformedWord})
+			addUndoEvent(UndoIgnore{action.all, original})
 			wordId++
 
 		case ActionReplace:

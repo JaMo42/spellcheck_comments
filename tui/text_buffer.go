@@ -144,6 +144,12 @@ func (self *TextBuffer) Newline() {
 	self.lines = append(self.lines, Line{[]TextSlice{}, 0})
 }
 
+func (self *TextBuffer) RemoveLastLineIfEmpty() {
+	if len(util.Back(self.lines).slices) == 0 {
+		_, self.lines = util.PopBack(self.lines)
+	}
+}
+
 func (self *TextBuffer) GetSlice(idx SliceIndex) *TextSlice {
 	return &self.lines[idx.line].slices[idx.slice]
 }

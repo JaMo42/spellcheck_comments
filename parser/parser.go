@@ -114,6 +114,9 @@ loop:
 			break loop
 		}
 	}
+	// The last line in the text buffer is just an empty list caused by the
+	// final newline, we remove it so no additional line number is displayed.
+	tb.RemoveLastLineIfEmpty()
 	// We need to set the slice pointers after building the text buffer as these
 	// point into slices which may be reallocated during creation.
 	for i := range words {
