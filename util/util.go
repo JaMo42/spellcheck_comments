@@ -69,6 +69,12 @@ func PopFrontOrDefault[T any](arr []T) (T, []T) {
 	return PopFront(arr)
 }
 
+// PopBack removes the last element from the given slice.
+func PopBack[T any](arr []T) (T, []T) {
+	last := len(arr) - 1
+	return arr[last], arr[:last]
+}
+
 // Back returns a pointer to the last element in the slice.
 func Back[T any](arr []T) *T {
 	return &arr[len(arr)-1]

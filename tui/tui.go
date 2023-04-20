@@ -38,6 +38,7 @@ type Tui struct {
 	mouse     []MouseReceiver
 	keys      map[rune]any
 	interrupt any
+	undo      any
 }
 
 func NewTui(scr tcell.Screen, layout Layout) Tui {
@@ -80,6 +81,10 @@ func (self *Tui) RemoveKey(key rune) {
 
 func (self *Tui) SetInterrupt(action any) {
 	self.interrupt = action
+}
+
+func (self *Tui) SetUndo(action any) {
+	self.undo = action
 }
 
 func (self *Tui) SetArrowReceiver(receiver ArrowReceiver) {
@@ -129,6 +134,8 @@ func (self *Tui) keyEvent(ev *tcell.EventKey) Optional[any] {
 		}
 	case tcell.KeyCtrlC:
 		return Some(self.interrupt)
+	case tcell.KeyCtrlZ:
+		return Some(self.undo)
 	default:
 		return None[any]()
 	}

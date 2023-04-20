@@ -8,7 +8,7 @@ import (
 	"github.com/JaMo42/spellcheck_comments/util"
 )
 
-// Rearranges the given array so items appear in rows when added to the dock.
+// AsRows rearranges the given array so items appear in rows when added to the dock.
 func AsRows[T any](items []T, columns int) []T {
 	rows := util.CeilDiv(len(items), columns)
 	result := make([]T, len(items))
@@ -36,14 +36,14 @@ func (self *AspellLayout) SetSource(sf *SourceFile) {
 	text := sf.Text()
 	self.source.SetTextBuffer(text)
 	self.highlight = sf.PeekWord().Unwrap().Index
-	text.GetSlice(self.highlight).ReverseColors()
+	//text.GetSlice(self.highlight).ReverseColors()
 }
 
 func (self *AspellLayout) Show(index tui.SliceIndex) {
 	self.source.ScrollTo(index.Line(), 5, false)
-	text := self.source.Text()
-	text.GetSlice(self.highlight).ReverseColors()
-	text.GetSlice(index).ReverseColors()
+	//text := self.source.Text()
+	//text.GetSlice(self.highlight).ReverseColors()
+	//text.GetSlice(index).ReverseColors()
 	self.highlight = index
 }
 
@@ -87,7 +87,10 @@ func (self *AspellLayout) Layout(width, height int) {
 
 func (self *AspellLayout) Update(scr tcell.Screen, widget any) {
 	if widget == nil {
+		text := self.source.Text()
+		text.GetSlice(self.highlight).ReverseColors()
 		self.source.Redraw(scr)
+		text.GetSlice(self.highlight).ReverseColors()
 	}
 	self.dock.Redraw(scr)
 }

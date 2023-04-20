@@ -10,14 +10,16 @@ import (
 	. "github.com/JaMo42/spellcheck_comments/common"
 	. "github.com/JaMo42/spellcheck_comments/source_file"
 	"github.com/JaMo42/spellcheck_comments/tui"
+	"github.com/JaMo42/spellcheck_comments/util"
 )
 
+type ActionSelectSuggestion struct{ index int }
 type ActionIgnore struct{ all bool }
 type ActionReplace struct{ all bool }
+type ActionUndo struct{}
 type ActionSkip struct{}
 type ActionExit struct{}
 type ActionAbort struct{}
-type ActionSelectSuggestion struct{ index int }
 
 type Layout interface {
 	SetSource(*SourceFile)
@@ -27,21 +29,42 @@ type Layout interface {
 	MouseReceivers() []tui.MouseReceiver
 }
 
+type UndoReplacement struct {
+	slice tui.SliceIndex
+}
+
+type UndoIgnore struct {
+	all  bool
+	word string
+}
+
+type UndoSkip struct{}
+
+type UndoReplaceAll struct {
+	startIndex tui.SliceIndex
+	from       string
+}
+
+type UndoEventBase struct {
+	fileId int
+	wordId int
+	kind   any
+}
+
 type SpellChecker struct {
-	scr     tcell.Screen
-	ui      tui.Tui
-	layout  Layout
-	speller aspell.Speller
-	ignore  map[string]bool
-	// replacements holds the words changed with replaceAll
+	scr          tcell.Screen
+	ui           tui.Tui
+	layout       Layout
+	speller      aspell.Speller
+	ignore       map[string]bool
 	replacements map[string]string
-	// replaced holds the words changed by replaceAll in the current file
-	replaced   map[tui.SliceIndex]bool
-	changed    bool
-	discardAll bool
-	doBackup   bool
-	files      []FileContext
-	caser      *cases.Caser
+	changed      bool
+	discardAll   bool
+	doBackup     bool
+	files        []FileContext
+	caser        *cases.Caser
+	currentFile  int
+	undoStack    []UndoEventBase
 }
 
 func NewSpellChecker(
@@ -58,6 +81,7 @@ func NewSpellChecker(
 	ui.SetArrowReceiver(layout.ArrowReceiver())
 	ui.SetMouseReceivers(layout.MouseReceivers())
 	ui.SetInterrupt(ActionAbort{})
+	ui.SetUndo(ActionUndo{})
 	for _, binding := range globalControls() {
 		ui.SetKey(binding.Key(), binding.Action())
 	}
@@ -77,7 +101,6 @@ func NewSpellChecker(
 		speller:      speller,
 		ignore:       make(map[string]bool),
 		replacements: make(map[string]string),
-		replaced:     make(map[tui.SliceIndex]bool),
 		doBackup:     cfg.General.Backup || options.backup,
 		caser:        caser,
 	}
@@ -92,31 +115,99 @@ func (self *SpellChecker) transform(word string) string {
 }
 
 // replaceAllInFile replaces all occurrences of a word in the current file.
+// from should already be transformed.
 func (self *SpellChecker) replaceAllInFile(file *FileContext, from string, to string, after tui.SliceIndex) {
-	from = self.transform(from)
 	for _, word := range file.Source().Words() {
 		if word.Index.IsAfter(after) && self.transform(word.Original) == from {
-			self.replaced[word.Index] = true
 			file.Change(word.Index, to)
 		}
 	}
 }
 
-func (self *SpellChecker) CheckFile(sf SourceFile) bool {
-	self.layout.SetSource(&sf)
-	file := NewFileContext(sf)
-	defer func() {
-		if file.IsChanged() {
-			self.files = append(self.files, file)
-		}
-	}()
-	self.replaced = make(map[tui.SliceIndex]bool)
+func (self *SpellChecker) setFile(id int) *FileContext {
+	self.currentFile = id
+	self.layout.SetSource(self.files[id].Source())
+	return &self.files[id]
+}
+
+// AddFile adds a file to the checker
+func (self *SpellChecker) AddFile(sf SourceFile) {
+	self.files = append(self.files, NewFileContext(sf))
+	self.currentFile = len(self.files) - 1
+	file := &self.files[len(self.files)-1]
 	for from, to := range self.replacements {
-		self.replaceAllInFile(&file, from, to, tui.NewSliceIndex(0, 0))
+		self.replaceAllInFile(file, from, to, tui.NewSliceIndex(0, 0))
 	}
-	for maybeWord := sf.NextWord(); maybeWord.IsSome(); maybeWord = sf.NextWord() {
-		word := maybeWord.Get()
-		if self.ignore[self.transform(word.Original)] || self.replaced[word.Index] {
+}
+
+func (self *SpellChecker) doUndo(event UndoEventBase) (int, int) {
+	file := &self.files[self.currentFile]
+	evFileId := event.fileId
+	evWordId := event.wordId
+	switch event := event.kind.(type) {
+	case UndoReplacement:
+		file.RemoveChange(event.slice, file.Word(evWordId).Original)
+
+	case UndoIgnore:
+		if event.all {
+			delete(self.ignore, event.word)
+		}
+
+	case UndoSkip:
+
+	case UndoReplaceAll:
+		delete(self.replacements, event.from)
+		for fileId := evFileId; fileId < len(self.files); fileId++ {
+			start := tui.SliceIndex{}
+			if fileId == evFileId {
+				start = event.startIndex
+			}
+			file := self.files[fileId]
+			for _, word := range file.Source().Words() {
+				if word.Index.IsAfter(start) && self.transform(word.Original) == event.from {
+					file.RemoveChange(word.Index, word.Original)
+				}
+			}
+		}
+
+	default:
+		panic("not an undo event")
+	}
+	return evFileId, evWordId
+}
+
+// Run runs the checker until all current files are checked. Returns true if the
+// program should quit.
+func (self *SpellChecker) Run() bool {
+	file := self.setFile(self.currentFile)
+	fileEnd := len(self.files)
+	wordEnd := len(file.Source().Words())
+	fileId := self.currentFile
+	wordId := 0
+	addUndoEvent := func(kind any) {
+		self.undoStack = append(
+			self.undoStack,
+			UndoEventBase{fileId, wordId, kind},
+		)
+	}
+	for {
+		// The blow code can freely change the word and files ids but should not
+		// change the current file, we only handle all those changes here.
+		if wordId >= wordEnd {
+			wordId = 0
+			fileId++
+		}
+		if fileId != self.currentFile {
+			if fileId >= fileEnd {
+				return false
+			}
+			file = self.setFile(fileId)
+			wordEnd = len(file.Source().Words())
+		}
+
+		word := file.Word(wordId)
+		if self.ignore[self.transform(word.Original)] || file.SliceIsChanged(word.Index) {
+			wordId++
 			continue
 		}
 		suggestions := self.speller.Suggest(word.Original)
@@ -125,6 +216,7 @@ func (self *SpellChecker) CheckFile(sf SourceFile) bool {
 		}
 		self.layout.SetSuggestions(suggestions)
 		self.layout.Show(word.Index)
+
 	repeatKey:
 		self.ui.Update(nil)
 		switch action := self.ui.RunUntilAction().(type) {
@@ -137,12 +229,18 @@ func (self *SpellChecker) CheckFile(sf SourceFile) bool {
 			replacement := suggestions[action.index]
 			file.Change(word.Index, replacement)
 			self.speller.Replace(word.Original, replacement)
+			addUndoEvent(UndoReplacement{word.Index})
 			self.changed = true
+			wordId++
 
 		case ActionIgnore:
+			var transformedWord string
 			if action.all {
-				self.ignore[self.transform(word.Original)] = true
+				transformedWord = self.transform(word.Original)
+				self.ignore[transformedWord] = true
 			}
+			addUndoEvent(UndoIgnore{action.all, transformedWord})
+			wordId++
 
 		case ActionReplace:
 			var caption string
@@ -160,19 +258,34 @@ func (self *SpellChecker) CheckFile(sf SourceFile) bool {
 			if maybeText.IsSome() && len(maybeText.Unwrap()) > 0 {
 				text := maybeText.Unwrap()
 				if action.all {
-					self.replacements[word.Original] = text
-					self.replaceAllInFile(&file, word.Original, text, word.Index)
+					original := self.transform(word.Original)
+					self.replacements[original] = text
+					for id := fileId; id < fileEnd; id++ {
+						self.replaceAllInFile(&self.files[id], original, text, word.Index)
+					}
+					addUndoEvent(UndoReplaceAll{word.Index, original})
 				} else {
 					file.Change(word.Index, text)
+					addUndoEvent(UndoReplacement{word.Index})
 				}
 				self.speller.Replace(word.Original, text)
 				self.changed = true
+				wordId++
 			} else {
 				goto repeatKey
 			}
 
+		case ActionUndo:
+			if len(self.undoStack) == 0 {
+				goto repeatKey
+			}
+			var event UndoEventBase
+			event, self.undoStack = util.PopBack(self.undoStack)
+			fileId, wordId = self.doUndo(event)
+
 		case ActionSkip:
-			return false
+			addUndoEvent(UndoSkip{})
+			fileId++
 
 		case ActionAbort:
 			if !self.changed ||
@@ -186,7 +299,6 @@ func (self *SpellChecker) CheckFile(sf SourceFile) bool {
 			return true
 		}
 	}
-	return false
 }
 
 func (self *SpellChecker) Finish() {
@@ -200,6 +312,9 @@ func (self *SpellChecker) Finish() {
 		}
 	}
 	for _, file := range self.files {
+		if !file.IsChanged() {
+			continue
+		}
 		if err := file.Write(); err != nil {
 			log.Printf("%s: could not write %s: %s\n", InvocationName, file.sf.Name(), err)
 		} else if self.doBackup {

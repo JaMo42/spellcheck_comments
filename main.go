@@ -232,6 +232,7 @@ func globalControls() []tui.KeyAction {
 		x('I', "Ignore all", ActionIgnore{true}),
 		x('r', "Replace", ActionReplace{false}),
 		x('R', "Replace all", ActionReplace{true}),
+		x('u', "Undo last change", ActionUndo{}),
 		x('s', "Skip rest of file", ActionSkip{}),
 		x('x', "Exit", ActionExit{}),
 		x('b', "Abort", ActionAbort{}),
@@ -381,7 +382,8 @@ func main() {
 	allOk := true
 	for sf := range sourceFiles {
 		allOk = false
-		if checker.CheckFile(sf) {
+		checker.AddFile(sf)
+		if checker.Run() {
 			break
 		}
 	}
