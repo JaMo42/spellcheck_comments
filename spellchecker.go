@@ -302,6 +302,15 @@ func (self *SpellChecker) Run() bool {
 }
 
 func (self *SpellChecker) Finish() {
+	// The current value of self.changed could be wrong as it is not updated
+	// by undo actions but we want an accurate value here.
+	self.changed = false
+	for _, file := range self.files {
+		if file.IsChanged() {
+			self.changed = true
+			break
+		}
+	}
 	if self.discardAll || !self.changed {
 		return
 	}
