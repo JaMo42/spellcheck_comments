@@ -44,7 +44,8 @@ var builtinStyles = []styleData{
 			BlockBegin:   []string{"/*"},
 			BlockEnd:     []string{"*/"},
 			BlockNesting: true,
-			Strings:      defaultStringStyle,
+			// We cannot match character literals as the ' also appears in lifetimes
+			Strings: []common.StringStyle{{Begin: "\"", End: "\"", Escape: "\\\""}},
 		},
 	},
 	{
