@@ -18,26 +18,26 @@ const (
 var FallbackCommentColor string
 
 type CfgGeneral struct {
-	HighlightCommands []string `toml:"highlight-commands"`
-	DimCode           bool     `toml:"dim-code"`
+	Backup            bool     `toml:"backup"`
+	BottomStatus      bool     `toml:"bottom-status"`
 	BoxStyle          string   `toml:"box-style"`
+	DimCode           bool     `toml:"dim-code"`
+	Filters           []string `toml:"filters"`
+	HighlightCommands []string `toml:"highlight-commands"`
+	IgnoreCase        bool     `toml:"ignore-case"`
+	IgnoreLists       []string `toml:"ignore-lists"`
 	ItalicToUnderline bool     `toml:"italic-to-underline"`
 	Layout            string   `toml:"layout"`
 	Mouse             bool     `toml:"mouse"`
-	TabSize           int      `toml:"tab-size"`
-	Filters           []string `toml:"filters"`
-	Backup            bool     `toml:"backup"`
-	IgnoreCase        bool     `toml:"ignore-case"`
-	IgnoreLists       []string `toml:"ignore-lists"`
-	BottomStatus      bool     `toml:"bottom-status"`
 	Suggestions       int      `toml:"suggestions"`
+	TabSize           int      `toml:"tab-size"`
 }
 
 type CfgColors struct {
-	Comment           string `toml:"comment-color"`
-	LineNumber        string `toml:"line-number"`
-	CurrentLineNumber string `toml:"current-line-number"`
 	BoxOutline        string `toml:"box-outline"`
+	Comment           string `toml:"comment-color"`
+	CurrentLineNumber string `toml:"current-line-number"`
+	LineNumber        string `toml:"line-number"`
 	Menu              string `toml:"menu"`
 	StatusBar         string `toml:"status-bar"`
 }
@@ -55,25 +55,25 @@ func DefaultConfig() Config {
 		Extensions: make(map[string][]string),
 		Styles:     make(map[string]CommentStyle),
 		General: CfgGeneral{
-			HighlightCommands: []string{},
-			DimCode:           true,
+			Backup:            true,
+			BottomStatus:      false,
 			BoxStyle:          "rounded",
+			DimCode:           true,
+			Filters:           []string{},
+			HighlightCommands: []string{},
+			IgnoreCase:        true,
+			IgnoreLists:       []string{".spellcheck_comments_ignorelist"},
 			ItalicToUnderline: false,
 			Layout:            "default",
 			Mouse:             true,
-			TabSize:           4,
-			Filters:           []string{},
-			Backup:            true,
-			IgnoreCase:        true,
-			IgnoreLists:       []string{".spellcheck_comments_ignorelist"},
-			BottomStatus:      false,
 			Suggestions:       -1,
+			TabSize:           4,
 		},
 		Colors: CfgColors{
-			Comment:           commentColorDefault,
-			LineNumber:        "\x1b[38;5;243m",
-			CurrentLineNumber: "\x1b[38;5;251m",
 			BoxOutline:        "\x1b[38;5;213m",
+			Comment:           commentColorDefault,
+			CurrentLineNumber: "\x1b[38;5;251m",
+			LineNumber:        "\x1b[38;5;243m",
 			Menu:              "\x1b[48;5;61;38;5;232m",
 			StatusBar:         "\x1b[38;5;251;7m",
 		},

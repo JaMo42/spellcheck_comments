@@ -143,6 +143,9 @@ func (self *inputBox) keyInSuggestions(ev *tcell.EventKey) (bool, Optional[strin
 	case tcell.KeyEnter:
 		return true, self.suggestions.GetSelected().(Optional[string])
 
+	case tcell.KeyCtrlC:
+		return true, None[string]()
+
 	default:
 		return false, None[string]()
 	}
