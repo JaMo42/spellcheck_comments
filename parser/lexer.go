@@ -15,7 +15,25 @@ const (
 	lexStateInCode int = iota
 	lexStateInEscape
 	lexStateInComment
+	lexStateInString
 )
+
+func LexerStateInfoName(info int) string {
+	switch info {
+	case lexStateInCode:
+		return "InCode"
+	case lexStateInEscape:
+		return "InEscape"
+	case lexStateInComment:
+		return "InComment"
+	case lexStateInString:
+		return "InString"
+	case eofStateInfo:
+		return "EOF"
+	default:
+		return "(unnamed)"
+	}
+}
 
 // lexTransition is a state info pair used for switching.
 type lexTransition struct{ from, to int }
@@ -98,6 +116,7 @@ func buildDfa(style CommentStyle) Dfa {
 	inEscapeState.AddTransition("m", inCodeState.Id())
 	eofState := dfa.AddState(eofStateInfo)
 	inCodeState.AddTransition(string(eofRune), eofState.Id())
+	inEscapeState.AddTransition(string(eofRune), eofState.Id())
 	// All line comment variants can share the same state.
 	// Line comments and block comments use the same info as we only need the
 	// the name to check if we are in any comment state.
@@ -108,8 +127,8 @@ func buildDfa(style CommentStyle) Dfa {
 		inLineState.AddTransition("\x1b", inEscapeState.Id())
 		inLineState.AddTransition(string(eofRune), eofState.Id())
 	}
-	for i, begin := range style.MultiBegin {
-		end := style.MultiEnd[i]
+	for i, begin := range style.BlockBegin {
+		end := style.BlockEnd[i]
 		// Each block comments variant needs its own state to ensure we enter
 		// and leave the comment with matching tokens (i.e. """ vs '''
 		// doc-strings) in Python.
@@ -118,6 +137,20 @@ func buildDfa(style CommentStyle) Dfa {
 		state.AddTransition(end, inCodeState.Id())
 		state.AddTransition("\x1b", inEscapeState.Id())
 		state.AddTransition("\n", state.Id())
+		state.AddTransition(string(eofRune), eofState.Id())
+		if style.BlockNesting {
+			state.MakeRecursive(begin, end)
+		}
+	}
+	for _, ss := range style.Strings {
+		state := dfa.AddState(lexStateInString)
+		// Note: if escape and end overlap (i.e. " and \") the scape will match
+		// first since it was added first.
+		inCodeState.AddTransition(ss.Begin, state.Id())
+		if len(ss.Escape) > 0 {
+			state.AddTransition(ss.Escape, state.Id())
+		}
+		state.AddTransition(ss.End, inCodeState.Id())
 		state.AddTransition(string(eofRune), eofState.Id())
 	}
 	return dfa
@@ -128,9 +161,6 @@ func NewLexer(source string, commentStyle CommentStyle) Lexer {
 	runes := []rune(source)
 	runes = append(runes, eofRune)
 	return Lexer{
-		// TODO: we use runes to get correct column information but since we need
-		// to calculate the visual column later anyways we don't actually need
-		// line or column information at all and could just use bytes.
 		runes,
 		0,
 		dfa,
@@ -234,6 +264,10 @@ func (self *Lexer) getNextTokens() {
 		if stateChanged {
 			self.state = self.dfa.CurrentState().info
 			if self.state == eofStateInfo {
+				self.used--
+				self.createToken(TokenKind.Code).Then(addToken)
+				self.used++
+				self.drop(1)
 				self.nextTokens = append(self.nextTokens, self.createMarker(TokenKind.EOF))
 				return
 			}
@@ -243,6 +277,7 @@ func (self *Lexer) getNextTokens() {
 				self.used -= tokenLength
 				self.createToken(TokenKind.Code).Then(addToken)
 				addToken(self.createMarker(TokenKind.CommentBegin))
+				self.used += tokenLength
 
 			case lexTransition{lexStateInCode, lexStateInEscape}:
 				self.used -= tokenLength
@@ -286,6 +321,9 @@ func (self *Lexer) getNextTokens() {
 				addToken(self.createMarker(TokenKind.Newline))
 			}
 			break
+
+			// Note: the InString state is completely ignored as it's just code
+			//       and only exists so we don't match comment tokens
 		}
 	}
 }

@@ -9,8 +9,12 @@ import (
 
 var cCommentStyle = CommentStyle{
 	Line:       []string{"//"},
-	MultiBegin: []string{"/*"},
-	MultiEnd:   []string{"*/"},
+	BlockBegin: []string{"/*"},
+	BlockEnd:   []string{"*/"},
+	Strings: []StringStyle{
+		{Begin: "\"", End: "\"", Escape: "\\\""},
+		{Begin: "'", End: "'", Escape: "\\'"},
+	},
 }
 
 // newToken creates a new token without location info.
@@ -37,34 +41,114 @@ func ExpectOutput(lexer Lexer, expected []Token, eqFn func(a, b Token) bool, t *
 	}
 }
 
-func TestNewlines(t *testing.T) {
-	source := "Line 1\n// Line 2\nLine 3\n/* Line 4\nLine 5 */\nLine 6"
-	expected := []Token{
-		newToken(TokenKind.Code, "Line 1"),
-		newToken(TokenKind.Newline),
-		newToken(TokenKind.CommentBegin),
-		newToken(TokenKind.Code, "// "),
-		newToken(TokenKind.CommentWord, "Line"),
-		newToken(TokenKind.Code, " 2"),
-		newToken(TokenKind.CommentEnd),
-		newToken(TokenKind.Newline),
-		newToken(TokenKind.Code, "Line 3"),
-		newToken(TokenKind.Newline),
-		newToken(TokenKind.CommentBegin),
-		newToken(TokenKind.Code, "/* "),
-		newToken(TokenKind.CommentWord, "Line"),
-		newToken(TokenKind.Code, " 4"),
-		newToken(TokenKind.Newline),
-		newToken(TokenKind.CommentWord, "Line"),
-		newToken(TokenKind.Code, " 5 */"),
-		newToken(TokenKind.CommentEnd),
-		newToken(TokenKind.Newline),
-		newToken(TokenKind.Code, "Line 6"),
-		newToken(TokenKind.Newline), // this is not in the source but for
-		// now the lexer needs to add it to prevent a crash, this is of course
-		// just temporary :^)
-		newToken(TokenKind.EOF),
+func Expect(t *testing.T, source string, expected []Token, style ...CommentStyle) {
+	commentStyle := cCommentStyle
+	if len(style) != 0 {
+		commentStyle = style[0]
 	}
-	lexer := NewLexer(source, cCommentStyle)
+	lexer := NewLexer(source, commentStyle)
 	ExpectOutput(lexer, expected, tokenInfoEq, t)
+}
+
+func TestOpenComment(t *testing.T) {
+	Expect(
+		t,
+		"/*",
+		[]Token{
+			newToken(TokenKind.CommentBegin),
+			newToken(TokenKind.Code, "/*"),
+			newToken(TokenKind.EOF),
+		},
+	)
+}
+
+func TestAlwaysEOFAfterEnd(t *testing.T) {
+	Expect(
+		t,
+		"hello world",
+		[]Token{
+			newToken(TokenKind.Code, "hello world"),
+			newToken(TokenKind.EOF),
+			newToken(TokenKind.EOF),
+			newToken(TokenKind.EOF),
+		},
+	)
+}
+
+func TestNewlines(t *testing.T) {
+	Expect(
+		t,
+		"Line 1\n// Line 2\nLine 3\n/* Line 4\nLine 5 */\nLine 6",
+		[]Token{
+			newToken(TokenKind.Code, "Line 1"),
+			newToken(TokenKind.Newline),
+			newToken(TokenKind.CommentBegin),
+			newToken(TokenKind.Code, "// "),
+			newToken(TokenKind.CommentWord, "Line"),
+			newToken(TokenKind.Code, " 2"),
+			newToken(TokenKind.CommentEnd),
+			newToken(TokenKind.Newline),
+			newToken(TokenKind.Code, "Line 3"),
+			newToken(TokenKind.Newline),
+			newToken(TokenKind.CommentBegin),
+			newToken(TokenKind.Code, "/* "),
+			newToken(TokenKind.CommentWord, "Line"),
+			newToken(TokenKind.Code, " 4"),
+			newToken(TokenKind.Newline),
+			newToken(TokenKind.CommentWord, "Line"),
+			newToken(TokenKind.Code, " 5 */"),
+			newToken(TokenKind.CommentEnd),
+			newToken(TokenKind.Newline),
+			newToken(TokenKind.Code, "Line 6"),
+			newToken(TokenKind.EOF),
+		},
+	)
+}
+
+func TestStrings(t *testing.T) {
+	Expect(
+		t,
+		"//aa\n\"//bb\\\"foo\"//cc",
+		[]Token{
+			newToken(TokenKind.CommentBegin),
+			newToken(TokenKind.Code, "//"),
+			newToken(TokenKind.CommentWord, "aa"),
+			newToken(TokenKind.CommentEnd),
+			newToken(TokenKind.Newline),
+			newToken(TokenKind.Code, "\"//bb\\\"foo\""),
+			newToken(TokenKind.CommentBegin),
+			newToken(TokenKind.Code, "//"),
+			newToken(TokenKind.CommentWord, "cc"),
+			newToken(TokenKind.EOF),
+		},
+	)
+}
+
+func TestOpenString(t *testing.T) {
+	Expect(
+		t,
+		"'open string",
+		[]Token{
+			newToken(TokenKind.Code, "'open string"),
+			newToken(TokenKind.EOF),
+		},
+	)
+}
+
+func TestNesting(t *testing.T) {
+	style := cCommentStyle
+	style.BlockNesting = true
+	Expect(
+		t,
+		"/*/*hello*/*/",
+		[]Token{
+			newToken(TokenKind.CommentBegin),
+			newToken(TokenKind.Code, "/*/*"),
+			newToken(TokenKind.CommentWord, "hello"),
+			newToken(TokenKind.Code, "*/*/"),
+			newToken(TokenKind.CommentEnd),
+			newToken(TokenKind.EOF),
+		},
+		style,
+	)
 }

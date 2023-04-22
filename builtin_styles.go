@@ -12,13 +12,18 @@ type styleData struct {
 	style       common.CommentStyle
 }
 
+// Note: there is no special support for character literals.
+var defaultStringStyle = []common.StringStyle{
+	{Begin: "\"", End: "\"", Escape: "\\\""},
+	{Begin: "'", End: "'", Escape: "\\'"},
+}
+
 // Source: https://en.wikipedia.org/wiki/Comparison_of_programming_languages_(syntax)#Comments
 var builtinStyles = []styleData{
 	{
 		name: "builtin-c",
 		extenstions: []string{
 			"c", "cc", "cpp", "cxx", "h", "hpp", "hxx",
-			"rs", // XXX: rust allows nesting of block comments which we do not
 			"go",
 			"js",
 			"cs",
@@ -26,8 +31,20 @@ var builtinStyles = []styleData{
 		},
 		style: common.CommentStyle{
 			Line:       []string{"//"},
-			MultiBegin: []string{"/*"},
-			MultiEnd:   []string{"*/"},
+			BlockBegin: []string{"/*"},
+			BlockEnd:   []string{"*/"},
+			Strings:    defaultStringStyle,
+		},
+	},
+	{
+		name:        "builtin-rust",
+		extenstions: []string{"rs"},
+		style: common.CommentStyle{
+			Line:         []string{"//"},
+			BlockBegin:   []string{"/*"},
+			BlockEnd:     []string{"*/"},
+			BlockNesting: true,
+			Strings:      defaultStringStyle,
 		},
 	},
 	{
@@ -35,15 +52,20 @@ var builtinStyles = []styleData{
 		extenstions: []string{"py"},
 		style: common.CommentStyle{
 			Line:       []string{"#"},
-			MultiBegin: []string{"\"\"\"", "'''"},
-			MultiEnd:   []string{"\"\"\"", "'''"},
+			BlockBegin: []string{"\"\"\"", "'''"},
+			BlockEnd:   []string{"\"\"\"", "'''"},
+			// We cannot support strings with the current parser as we'd always
+			// match the strings over the doc strings.
+			// Luckily we can only wrongly identify line comments so we don't
+			// need to worry about unbalanced block comment tokens.
 		},
 	},
 	{
 		name:        "builtin-#",
 		extenstions: []string{"sh", "bashrc", "toml", "ini", "cfg", "rb"},
 		style: common.CommentStyle{
-			Line: []string{"#"},
+			Line:    []string{"#"},
+			Strings: defaultStringStyle,
 		},
 	},
 }
@@ -73,6 +95,5 @@ func MergeBuiltinStyles(cfg *common.Config) {
 		}
 		cfg.Styles[style.name] = style.style
 		cfg.Extensions[style.name] = extensions
-
 	}
 }

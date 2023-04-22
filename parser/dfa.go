@@ -52,12 +52,29 @@ type DfaState struct {
 	transitions []Transition
 	// Note: we expect a small number of relevant characters and states
 	//       so we use arrays for these instead of maps.
+	isRecursive bool
+	descent     maskedToken
+	ascent      maskedToken
 }
 
 func newDfaState(id State, info int) *DfaState {
 	state := new(DfaState)
-	*state = DfaState{id, info, []rune{}, []Transition{}}
+	*state = DfaState{
+		id:          id,
+		info:        info,
+		useChars:    []rune{},
+		transitions: []Transition{},
+	}
 	return state
+}
+
+// MakeRecursive turns this state into a recursive state. The descent token
+// increases the recursion depth and ascent decreases it. Either of these do
+// not count as state changes.
+func (self *DfaState) MakeRecursive(descent, ascent string) {
+	self.isRecursive = true
+	self.descent = newMaskedToken(descent)
+	self.ascent = newMaskedToken(ascent)
 }
 
 func (self *DfaState) Id() State {
@@ -76,9 +93,10 @@ func (self *DfaState) AddTransition(token string, toState State) {
 type Dfa struct {
 	// Need to store as pointer so the value returned from `AddState`
 	// stays valid even when this slice is reallocated
-	states  []*DfaState
-	current State
-	token   dfaToken
+	states         []*DfaState
+	current        State
+	token          dfaToken
+	recursionDepth int
 }
 
 func NewDfa() Dfa {
@@ -114,6 +132,17 @@ func (self *Dfa) Process(c rune) (bool, int) {
 		str := string(c)
 		self.token <<= 8 * len(str) // len gives length in bytes
 		self.token |= util.String2Int(str)
+	}
+	if currentState.isRecursive {
+		if currentState.descent.Eq(self.token) {
+			self.recursionDepth++
+			self.token = 0
+			return false, 0
+		} else if self.recursionDepth != 0 && currentState.ascent.Eq(self.token) {
+			self.recursionDepth--
+			self.token = 0
+			return false, 0
+		}
 	}
 	for _, trans := range currentState.transitions {
 		if trans.token.Eq(self.token) {

@@ -24,6 +24,8 @@ func Filter(s string, filters []*regexp.Regexp) bool {
 	return true
 }
 
+// IsWord returns true if the string contains at least 2 letters and at most
+// one aposthrophe for words like "don't".
 func IsWord(s string) bool {
 	letters := 0
 	haveApostrophe := false
@@ -38,6 +40,23 @@ func IsWord(s string) bool {
 		}
 	}
 	return letters >= 2
+}
+
+// TrimSymbols strips the string from leading and trailing ascii punctuation
+// characters.
+func TrimSymbols(s string) (string, string, string) {
+	first := 0
+	for first < len(s) && s[first] < 0x80 && unicode.IsPunct(rune(s[first])) {
+		first++
+	}
+	if first == len(s)-1 {
+		return s, "", ""
+	}
+	last := len(s) - 1
+	for last >= first && s[last] < 0x80 && unicode.IsPunct(rune(s[last])) {
+		last--
+	}
+	return s[:first], s[first : last+1], s[last+1:]
 }
 
 func Parse(
@@ -78,12 +97,21 @@ loop:
 			tb.AddTabbedSlice(tok.text)
 
 		case TokenKind.CommentWord:
-			idx := tb.AddSlice(tok.text)
-			if IsWord(tok.text) &&
-				!ignoreList.Ignore(tok.text) &&
-				!speller.Check(tok.text) &&
-				Filter(tok.text, filters) {
-				words = append(words, sf.NewWord(tok.text, nil, idx))
+			before, word, after := TrimSymbols(tok.text)
+			if len(before) > 0 {
+				tb.AddSlice(before)
+			}
+			if len(word) > 0 {
+				idx := tb.AddSlice(word)
+				if IsWord(word) &&
+					!ignoreList.Ignore(word) &&
+					!speller.Check(word) &&
+					Filter(word, filters) {
+					words = append(words, sf.NewWord(word, nil, idx))
+				}
+			}
+			if len(after) > 0 {
+				tb.AddSlice(after)
 			}
 
 		case TokenKind.CommentBegin:

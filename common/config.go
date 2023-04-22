@@ -147,44 +147,10 @@ func (self *Config) DumpStyles() {
 	})
 	first := true
 	for _, pair := range styles {
-		name := pair.name
-		style := pair.style
 		if !first {
 			fmt.Println()
 		}
 		first = false
-		fmt.Printf("\x1b[1m%s\x1b[m\n", name)
-		fmt.Print("   Line styles: ")
-		last := len(style.Line) - 1
-		for i, s := range style.Line {
-			fmt.Printf("%s%s\x1b[m", FallbackCommentColor, s)
-			if i != last {
-				fmt.Print(", ")
-			}
-		}
-		fmt.Println()
-		fmt.Print("  Block styles: ")
-		last = len(style.MultiBegin) - 1
-		for i, begin := range style.MultiBegin {
-			end := style.MultiEnd[i]
-			fmt.Printf(
-				"%s%s\x1b[;2m...\x1b[22m%s%s\x1b[m",
-				FallbackCommentColor,
-				begin,
-				FallbackCommentColor,
-				end,
-			)
-			if i != last {
-				fmt.Print(", ")
-			}
-		}
-		fmt.Println()
-		extensions := self.Extensions[name]
-		if len(extensions) == 1 {
-			fmt.Print("     Extension: ")
-		} else {
-			fmt.Print("    Extensions: ")
-		}
-		fmt.Println(strings.Join(self.Extensions[name], ", "))
+		pair.style.Dump(pair.name, self.Extensions[pair.name])
 	}
 }

@@ -1,24 +1,12 @@
-[styles.c]
-line = ["//"]
-multi-begin = ["/*"]
-multi-end = ["*/"]
-
-[styles.python]
-line = ["#"]
-multi-begin = ["\"\"\"", "'''"]
-multi-end = ["\"\"\"", "'''"]
-
-[styles.toml]
-line = ["#"]
-
 [styles.ini]
 line = ["#", ";"]
 
 [extensions]
-c = ["c", "cc", "cpp", "cxx", "h", "hh", "hpp", "hxx", "rs", "go"]
-python = ["py"]
-toml = ["toml"]
 ini = ["ini", "cfg"]
+
+[aspell-options]
+lang = "en_US"
+ignore-case = "true"
 
 [general]
 highlight-commands = [
@@ -27,9 +15,10 @@ highlight-commands = [
 ]
 italic-to-underline = true
 box-style = "heavysharp"
-# Ignore PascalCase, camelCalse and snake_case words as they're likely identifiers.
+# Ignore PascalCase, camelCalse, snake_case, and kebab-case words as
+# they're likely identifiers.
 filters = [
     "^[[:upper:]]?[[:lower:]]+[[:upper:]].*$",
-    "^[[:alpha:]]*_[[:alpha:]]*$",
+    "^[[:alpha:]]*[_-][[:alpha:]].*$",
 ]
-layout = "aspell"
+backup = false

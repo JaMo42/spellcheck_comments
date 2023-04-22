@@ -23,7 +23,7 @@ import (
 
 const (
 	appName    = "spellcheck_comments"
-	appVersion = "0.2.0"
+	appVersion = "0.3.0"
 )
 
 type Options struct {
@@ -49,7 +49,7 @@ func parseArgs() (Options, []string) {
 	)
 	flag.BoolVar(
 		&options.backup, "with-backup", false,
-		"generate a backup even if disable in the config",
+		"generate a backup, even if disabled in the config",
 	)
 	flag.BoolVar(
 		&options.applyBackup, "apply-backup", false,
@@ -310,7 +310,7 @@ func configPath() (Paths, bool) {
 	return Paths{}, false
 }
 
-// collectIgnoreLists creates the ignore list from all ignore list fiels to use.
+// collectIgnoreLists creates the ignore list from all ignore list files to use.
 func collectIgnoreLists(configPath Optional[string], cfg *Config) IgnoreList {
 	dirs := []string{}
 	if cwd, err := os.Getwd(); err == nil {
@@ -320,8 +320,8 @@ func collectIgnoreLists(configPath Optional[string], cfg *Config) IgnoreList {
 		dirs = append(dirs, path)
 	})
 	list := NewIgnoreList(cfg.General.IgnoreCase)
-	list.Add("todo")
-	list.Add("fixme")
+	list.Add("TODO")
+	list.Add("FIXME")
 	for _, filename := range cfg.General.IgnoreLists {
 		for _, dir := range dirs {
 			pathname := fmt.Sprintf("%s/%s", dir, filename)
