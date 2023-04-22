@@ -53,19 +53,20 @@ type UndoEventBase struct {
 }
 
 type SpellChecker struct {
-	scr          tcell.Screen
-	ui           tui.Tui
-	layout       Layout
-	speller      aspell.Speller
-	ignore       map[string]bool
-	replacements map[string]string
-	changed      bool
-	discardAll   bool
-	doBackup     bool
-	files        []FileContext
-	caser        *cases.Caser
-	currentFile  int
-	undoStack    []UndoEventBase
+	scr             tcell.Screen
+	ui              tui.Tui
+	layout          Layout
+	speller         aspell.Speller
+	ignore          map[string]bool
+	replacements    map[string]string
+	changed         bool
+	discardAll      bool
+	doBackup        bool
+	files           []FileContext
+	caser           *cases.Caser
+	currentFile     int
+	undoStack       []UndoEventBase
+	suggestionCount int
 }
 
 func NewSpellChecker(
@@ -97,14 +98,15 @@ func NewSpellChecker(
 		*caser = cases.Fold()
 	}
 	return SpellChecker{
-		scr:          scr,
-		ui:           ui,
-		layout:       layout,
-		speller:      speller,
-		ignore:       make(map[string]bool),
-		replacements: make(map[string]string),
-		doBackup:     cfg.General.Backup || options.backup,
-		caser:        caser,
+		scr:             scr,
+		ui:              ui,
+		layout:          layout,
+		speller:         speller,
+		ignore:          make(map[string]bool),
+		replacements:    make(map[string]string),
+		doBackup:        cfg.General.Backup || options.backup,
+		caser:           caser,
+		suggestionCount: cfg.General.Suggestions,
 	}
 }
 
@@ -213,8 +215,8 @@ func (self *SpellChecker) Run() bool {
 			continue
 		}
 		suggestions := self.speller.Suggest(word.Original)
-		if len(suggestions) > 20 {
-			suggestions = suggestions[:20]
+		if len(suggestions) > self.suggestionCount {
+			suggestions = suggestions[:self.suggestionCount]
 		}
 		self.layout.SetSuggestions(suggestions)
 		self.layout.Show(word.Index)

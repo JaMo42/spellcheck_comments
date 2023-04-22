@@ -31,15 +31,17 @@ func AsRows[T any](items []T, columns int) []T {
 }
 
 type AspellLayout struct {
-	highlight    tui.SliceIndex
-	bottomStatus bool
-	source       tui.TextBufferView
-	dock         tui.Dock
-	statusBar    tui.StatusBar
+	highlight       tui.SliceIndex
+	bottomStatus    bool
+	source          tui.TextBufferView
+	dock            tui.Dock
+	statusBar       tui.StatusBar
+	suggestionCount int
 }
 
 func (self *AspellLayout) Configure(cfg *Config) {
 	self.bottomStatus = cfg.General.BottomStatus
+	self.suggestionCount = cfg.General.Suggestions
 }
 
 func (self *AspellLayout) SetSource(sf *SourceFile) {
@@ -71,7 +73,8 @@ func (self *AspellLayout) Create() {
 	globalControls := AsRows(_globalControls, columnCount)
 	self.source = tui.NewTextBufferView()
 	permRows := util.CeilDiv(len(globalControls), columnCount)
-	self.dock = tui.NewDock(tui.Alignment.End, tui.Alignment.Fill, columnCount, 5, permRows)
+	dynRows := util.CeilDiv(self.suggestionCount, columnCount)
+	self.dock = tui.NewDock(tui.Alignment.End, tui.Alignment.Fill, columnCount, dynRows, permRows)
 	self.dock.SetPermanentItems(globalControls)
 	self.dock.TranslateAction(func(group int, item int) any {
 		if group == 0 {

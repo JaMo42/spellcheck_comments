@@ -9,20 +9,23 @@ import (
 	. "github.com/JaMo42/spellcheck_comments/common"
 	. "github.com/JaMo42/spellcheck_comments/source_file"
 	"github.com/JaMo42/spellcheck_comments/tui"
+	"github.com/JaMo42/spellcheck_comments/util"
 )
 
 type DefaultLayout struct {
-	highlight     tui.SliceIndex
-	bottomStatus  bool
-	source        tui.TextBufferView
-	pmenu         tui.Menu
-	menuContainer tui.MenuContainer
-	globalKeys    tui.Dock
-	statusBar     tui.StatusBar
+	highlight       tui.SliceIndex
+	bottomStatus    bool
+	source          tui.TextBufferView
+	pmenu           tui.Menu
+	menuContainer   tui.MenuContainer
+	globalKeys      tui.Dock
+	statusBar       tui.StatusBar
+	suggestionCount int
 }
 
 func (self *DefaultLayout) Configure(cfg *Config) {
 	self.bottomStatus = cfg.General.BottomStatus
+	self.suggestionCount = cfg.General.Suggestions
 }
 
 func (self *DefaultLayout) SetSource(sf *SourceFile) {
@@ -61,13 +64,15 @@ func (self *DefaultLayout) MouseReceivers() []tui.MouseReceiver {
 }
 
 func (self *DefaultLayout) Create() {
+	const columnCount = 2
 	globalControls := globalControls()
 	self.source = tui.NewTextBufferView()
 	topGap := 0
 	if !self.bottomStatus {
 		topGap = 1
 	}
-	self.pmenu = tui.NewMenu(tui.MenuLocation.Below, 5, 2, topGap)
+	rows := util.CeilDiv(self.suggestionCount, columnCount)
+	self.pmenu = tui.NewMenu(tui.MenuLocation.Below, rows, columnCount, topGap)
 	self.menuContainer = tui.NewMenuContainer()
 	self.menuContainer.SetMenu(&self.pmenu)
 	self.globalKeys = tui.NewDock(tui.Alignment.End, tui.Alignment.End, 1, 0, len(globalControls))

@@ -89,6 +89,7 @@ func Parse(
 		commentColor = commentColor.Dim(false)
 	}
 	tb.SetStyle(tcell.StyleDefault.Dim(dimCode))
+
 loop:
 	for {
 		tok := lexer.Next()

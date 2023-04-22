@@ -30,6 +30,7 @@ type CfgGeneral struct {
 	IgnoreCase        bool     `toml:"ignore-case"`
 	IgnoreLists       []string `toml:"ignore-lists"`
 	BottomStatus      bool     `toml:"bottom-status"`
+	Suggestions       int      `toml:"suggestions"`
 }
 
 type CfgColors struct {
@@ -66,6 +67,7 @@ func DefaultConfig() Config {
 			IgnoreCase:        true,
 			IgnoreLists:       []string{".spellcheck_comments_ignorelist"},
 			BottomStatus:      false,
+			Suggestions:       -1,
 		},
 		Colors: CfgColors{
 			Comment:           commentColorDefault,
@@ -101,6 +103,13 @@ func LoadConfig(pathname string) Config {
 		FallbackCommentColor = DefaultCommentColor
 	} else {
 		FallbackCommentColor = cfg.Colors.Comment
+	}
+	if cfg.General.Suggestions < 0 {
+		if cfg.General.Layout == "aspell" {
+			cfg.General.Suggestions = 10
+		} else {
+			cfg.General.Suggestions = 20
+		}
 	}
 	return cfg
 }
