@@ -84,8 +84,10 @@ func (self *inputBox) Run() Optional[string] {
 					self.suggestions.Redraw(self.scr, self.viewport.X+1, self.viewport.Y+4)
 					self.scr.Show()
 				}
-			} else if sel := self.suggestions.Click(x, y, ev.Buttons()); sel.IsSome() {
-				return sel.Unwrap().(Optional[string])
+			} else if ev.Buttons()&tcell.Button1 == tcell.Button1 {
+				if sel := self.suggestions.Click(x, y, ev.Buttons()); sel.IsSome() {
+					return sel.Unwrap().(Optional[string])
+				}
 			}
 
 		case *tcell.EventResize:

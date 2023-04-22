@@ -150,7 +150,7 @@ func (self *Tui) mouseEvent(ev *tcell.EventMouse) Optional[any] {
 				self.Update(receiver)
 			}
 		}
-	} else {
+	} else if ev.Buttons()&tcell.Button1 == tcell.Button1 {
 		// Should 2 mouse sinks end up overlapping, the one that comes later in
 		// the list will be visible on top so we iterate in reverse here so we
 		// don't end up clicking through that topmost sink.
