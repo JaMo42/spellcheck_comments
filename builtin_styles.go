@@ -45,7 +45,13 @@ var builtinStyles = []styleData{
 			BlockEnd:     []string{"*/"},
 			BlockNesting: true,
 			// We cannot match character literals as the ' also appears in lifetimes
-			Strings: []common.StringStyle{{Begin: "\"", End: "\"", Escape: "\\\""}},
+			Strings: []common.StringStyle{
+				// Add a special case for '"' so we don't match the string begin
+				// inside that. This must be before the other kind as their ends
+				// overlap.
+				{Begin: "'\"", End: "'"},
+				{Begin: "\"", End: "\"", Escape: "\\\""},
+			},
 		},
 	},
 	{
