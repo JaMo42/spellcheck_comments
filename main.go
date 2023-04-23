@@ -23,7 +23,7 @@ import (
 
 const (
 	appName    = "spellcheck_comments"
-	appVersion = "0.3.1"
+	appVersion = "0.3.2"
 )
 
 type Options struct {

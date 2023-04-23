@@ -96,14 +96,14 @@ func (self *Token) Text() string {
 }
 
 type Lexer struct {
-	source       []rune
-	used         int
-	dfa          Dfa
-	state        int
-	commentState Optional[State]
-	ignoreWord   bool
-	wordLength   int
-	nextTokens   []Token
+	source     []rune
+	used       int
+	dfa        Dfa
+	state      int
+	prevState  Optional[State]
+	ignoreWord bool
+	wordLength int
+	nextTokens []Token
 }
 
 func buildDfa(style CommentStyle) Dfa {
@@ -151,6 +151,7 @@ func buildDfa(style CommentStyle) Dfa {
 			state.AddTransition(ss.Escape, state.Id())
 		}
 		state.AddTransition(ss.End, inCodeState.Id())
+		state.AddTransition("\x1b", inEscapeState.Id())
 		state.AddTransition(string(eofRune), eofState.Id())
 	}
 	return dfa
@@ -296,7 +297,7 @@ func (self *Lexer) getNextTokens() {
 
 			case lexTransition{lexStateInEscape, lexStateInCode}:
 				addToken(self.createToken(TokenKind.Style).Unwrap())
-				self.commentState.Take().Then(func(id State) {
+				self.prevState.Take().Then(func(id State) {
 					// When finishing a escape sequence we always go back to the code so if there
 					// was a escape sequence in a comment we need to manually go back to that
 					// comment state.
@@ -307,8 +308,10 @@ func (self *Lexer) getNextTokens() {
 			// Note: due to the above the `escape -> comment` transition does not exist.
 
 			case lexTransition{lexStateInComment, lexStateInEscape}:
+				fallthrough
+			case lexTransition{lexStateInString, lexStateInEscape}:
 				self.used -= tokenLength
-				self.commentState = Some(lastState.id)
+				self.prevState = Some(lastState.id)
 				self.createToken(TokenKind.Code).Then(addToken)
 
 			case lexTransition{lexStateInCode, lexStateInCode}:
@@ -321,9 +324,6 @@ func (self *Lexer) getNextTokens() {
 				addToken(self.createMarker(TokenKind.Newline))
 			}
 			break
-
-			// Note: the InString state is completely ignored as it's just code
-			//       and only exists so we don't match comment tokens
 		}
 	}
 }

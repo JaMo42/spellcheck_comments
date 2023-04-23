@@ -135,10 +135,6 @@ func commentIsCode(
 			emptyLine = true
 		}
 	})
-	// TODO: remove debugging stuff once sure this is ok
-	//if confidence >= target {
-	//	log.Printf("%d~%d: %f/%f\n", begin.Line(), end.Line(), confidence, target)
-	//}
 	return confidence >= target
 }
 
@@ -156,11 +152,6 @@ func FilterCommentedCode(
 ) []sf.Word {
 	comments = util.Filter(comments, func(comment CommentRange) bool {
 		return commentIsCode(comment.begin, comment.end, text, lineBeginTokens)
-		//isComment := commentIsCode(comment.begin, comment.end, text, lineBeginTokens)
-		//if isComment {
-		//	log.Printf("filter: %v~%v\n", comment.begin, comment.end)
-		//}
-		//return isComment
 	})
 	if len(comments) == 0 {
 		return words
@@ -171,7 +162,6 @@ func FilterCommentedCode(
 		}
 		for _, comment := range comments {
 			if comment.Contains(w.Index) {
-				//log.Println("remove", w.Original, w.Index)
 				return false
 			}
 		}

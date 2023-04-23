@@ -62,6 +62,19 @@ func TestOpenComment(t *testing.T) {
 	)
 }
 
+func TestStyleInComment(t *testing.T) {
+	Expect(
+		t,
+		"//\x1b[m",
+		[]Token{
+			newToken(TokenKind.CommentBegin),
+			newToken(TokenKind.Code, "//"),
+			newToken(TokenKind.Style, "\x1b[m"),
+			newToken(TokenKind.EOF),
+		},
+	)
+}
+
 func TestAlwaysEOFAfterEnd(t *testing.T) {
 	Expect(
 		t,
@@ -163,6 +176,19 @@ func TestEmptyStrings(t *testing.T) {
 			newToken(TokenKind.EOF),
 		},
 		style,
+	)
+}
+
+func TestStyleInString(t *testing.T) {
+	Expect(
+		t,
+		"\"\x1b[m\"",
+		[]Token{
+			newToken(TokenKind.Code, "\""),
+			newToken(TokenKind.Style, "\x1b[m"),
+			newToken(TokenKind.Code, "\""),
+			newToken(TokenKind.EOF),
+		},
 	)
 }
 
