@@ -298,9 +298,10 @@ func (self *Lexer) getNextTokens() {
 			case lexTransition{lexStateInEscape, lexStateInCode}:
 				addToken(self.createToken(TokenKind.Style).Unwrap())
 				self.prevState.Take().Then(func(id State) {
-					// When finishing a escape sequence we always go back to the code so if there
-					// was a escape sequence in a comment we need to manually go back to that
-					// comment state.
+					// When finishing a escape sequence we always go back to
+					// the code state so if there was a escape sequence in a
+					// different state we need to manually go back to that
+					// state.
 					self.dfa.ForceState(id)
 					self.state = self.dfa.CurrentState().info
 				})

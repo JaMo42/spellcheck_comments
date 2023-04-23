@@ -23,7 +23,7 @@ var builtinStyles = []styleData{
 	{
 		name: "builtin-c",
 		extenstions: []string{
-			"c", "cc", "cpp", "cxx", "h", "hpp", "hxx",
+			"c", "cc", "cpp", "cxx", "h", "hh", "hpp", "hxx",
 			"go",
 			"js",
 			"cs",
