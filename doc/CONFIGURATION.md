@@ -13,7 +13,7 @@ strings = [
     # Note: characters must also be treated as strings
     # Note: characters could be omitted here since all
     #       comment tokens are longer than 1 character
-    #       a strings only exist to not wrongly match
+    #       and strings only exist to not wrongly match
     #       comment tokens.
     { begin="'", escape="\\'", end="'" },
 ]
