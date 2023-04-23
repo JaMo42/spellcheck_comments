@@ -18,8 +18,16 @@ type TextSlice struct {
 	width int
 }
 
+func (self *TextSlice) Text() string {
+	return self.text
+}
+
 func (self *TextSlice) Width() int {
 	return self.width
+}
+
+func (self *TextSlice) Style() tcell.Style {
+	return self.style
 }
 
 // ReverseColors toggles the reverse attribute of the slices style.
@@ -64,9 +72,18 @@ func (self *SliceIndex) Line() int {
 	return self.line
 }
 
-// IsAfter returns true if this slice is equal to or after the given slice.
-func (self *SliceIndex) IsAfter(other SliceIndex) bool {
+// IsSameOrAfter returns true if this slice is equal to or after the given slice.
+func (self *SliceIndex) IsSameOrAfter(other SliceIndex) bool {
 	return self.line > other.line || (self.line == other.line && self.slice >= other.slice)
+}
+
+// IsBefore returns true is this slice comes before the given slice.
+func (self *SliceIndex) IsBefore(other SliceIndex) bool {
+	return self.line < other.line || (self.line == other.line && self.slice < other.slice)
+}
+
+func (self *SliceIndex) OffsetLine(by int) {
+	self.line += by
 }
 
 // TextBuffer holds lines of text that are themselves split into slices.
@@ -100,7 +117,7 @@ func (self *TextBuffer) AddSlice(slice string) SliceIndex {
 	sliceIdx := len(line.slices)
 	line.addSlice(slice, self.style)
 	self.capacity += len(slice)
-	return SliceIndex{len(self.lines) - 1, sliceIdx}
+	return NewSliceIndex(len(self.lines)-1, sliceIdx)
 }
 
 // addTabs adds a slice consisting of only tabs to the text buffer.
@@ -152,6 +169,17 @@ func (self *TextBuffer) RemoveLastLineIfEmpty() {
 	}
 }
 
+// NextIndex returns the index of the next slice being added, assuming no
+// newline is added before.
+func (self *TextBuffer) NextIndex() SliceIndex {
+	return NewSliceIndex(len(self.lines), len(util.Back(self.lines).slices))
+}
+
+// CurrentIndex returns the index of the most recently added slice.
+func (self *TextBuffer) CurrentIndex() SliceIndex {
+	return NewSliceIndex(len(self.lines), len(util.Back(self.lines).slices)-1)
+}
+
 func (self *TextBuffer) GetSlice(idx SliceIndex) *TextSlice {
 	return &self.lines[idx.line].slices[idx.slice]
 }
@@ -197,5 +225,39 @@ func (self *TextBuffer) ForEach(f func(string)) {
 func (self *TextBuffer) ForEachInLine(line int, f func(string, SliceIndex)) {
 	for i, slice := range self.lines[line].slices {
 		f(slice.text, SliceIndex{line, i})
+	}
+}
+
+// ForEachSliceInRange calls the given function for each slice in the given range.
+// The function also receives a boolean which is true if it's the last slice in its line.
+func (self *TextBuffer) ForEachSliceInRange(begin, end SliceIndex, f func(*TextSlice, bool)) {
+	lines := end.line - begin.line
+	// Special case: start and end on same line
+	if lines == 0 {
+		line := &self.lines[begin.line]
+		last := len(line.slices) - 1 - begin.slice
+		for i, slice := range line.slices[begin.slice:end.slice] {
+			f(&slice, i == last)
+		}
+		return
+	}
+	// Beginning maybe partial line
+	last := len(self.lines[begin.line].slices) - 1 - begin.slice
+	for sliceIdx, slice := range self.lines[begin.line].slices[begin.slice:] {
+		f(&slice, sliceIdx == last)
+	}
+	// Full lines between
+	if lines > 2 {
+		for _, line := range self.lines[begin.line+1 : end.line] {
+			last = len(line.slices) - 1
+			for i, slice := range line.slices {
+				f(&slice, i == last)
+			}
+		}
+	}
+	// End maybe partial line
+	last = len(self.lines[end.line].slices) - 1
+	for i, slice := range self.lines[end.line].slices[:end.slice] {
+		f(&slice, i == last)
 	}
 }

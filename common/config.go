@@ -18,19 +18,20 @@ const (
 var FallbackCommentColor string
 
 type CfgGeneral struct {
-	Backup            bool     `toml:"backup"`
-	BottomStatus      bool     `toml:"bottom-status"`
-	BoxStyle          string   `toml:"box-style"`
-	DimCode           bool     `toml:"dim-code"`
-	Filters           []string `toml:"filters"`
-	HighlightCommands []string `toml:"highlight-commands"`
-	IgnoreCase        bool     `toml:"ignore-case"`
-	IgnoreLists       []string `toml:"ignore-lists"`
-	ItalicToUnderline bool     `toml:"italic-to-underline"`
-	Layout            string   `toml:"layout"`
-	Mouse             bool     `toml:"mouse"`
-	Suggestions       int      `toml:"suggestions"`
-	TabSize           int      `toml:"tab-size"`
+	Backup              bool     `toml:"backup"`
+	BottomStatus        bool     `toml:"bottom-status"`
+	BoxStyle            string   `toml:"box-style"`
+	DimCode             bool     `toml:"dim-code"`
+	FilterCommentedCode bool     `toml:"filter-commented-code"`
+	Filters             []string `toml:"filters"`
+	HighlightCommands   []string `toml:"highlight-commands"`
+	IgnoreCase          bool     `toml:"ignore-case"`
+	IgnoreLists         []string `toml:"ignore-lists"`
+	ItalicToUnderline   bool     `toml:"italic-to-underline"`
+	Layout              string   `toml:"layout"`
+	Mouse               bool     `toml:"mouse"`
+	Suggestions         int      `toml:"suggestions"`
+	TabSize             int      `toml:"tab-size"`
 }
 
 type CfgColors struct {
@@ -55,19 +56,20 @@ func DefaultConfig() Config {
 		Extensions: make(map[string][]string),
 		Styles:     make(map[string]CommentStyle),
 		General: CfgGeneral{
-			Backup:            true,
-			BottomStatus:      false,
-			BoxStyle:          "rounded",
-			DimCode:           true,
-			Filters:           []string{},
-			HighlightCommands: []string{},
-			IgnoreCase:        true,
-			IgnoreLists:       []string{".spellcheck_comments_ignorelist"},
-			ItalicToUnderline: false,
-			Layout:            "default",
-			Mouse:             true,
-			Suggestions:       -1,
-			TabSize:           4,
+			Backup:              true,
+			BottomStatus:        false,
+			BoxStyle:            "rounded",
+			DimCode:             true,
+			FilterCommentedCode: false,
+			Filters:             []string{},
+			HighlightCommands:   []string{},
+			IgnoreCase:          true,
+			IgnoreLists:         []string{".spellcheck_comments_ignorelist"},
+			ItalicToUnderline:   false,
+			Layout:              "default",
+			Mouse:               true,
+			Suggestions:         -1,
+			TabSize:             4,
 		},
 		Colors: CfgColors{
 			BoxOutline:        "\x1b[38;5;213m",

@@ -23,15 +23,16 @@ import (
 
 const (
 	appName    = "spellcheck_comments"
-	appVersion = "0.3.0"
+	appVersion = "0.3.1"
 )
 
 type Options struct {
-	backup         bool
-	applyBackup    bool
-	applyBackupAll bool
-	globs          []string
-	dumpStyles     bool
+	backup              bool
+	applyBackup         bool
+	applyBackupAll      bool
+	globs               []string
+	dumpStyles          bool
+	filterCommentedCode bool
 }
 
 func parseArgs() (Options, []string) {
@@ -66,6 +67,10 @@ func parseArgs() (Options, []string) {
 	flag.BoolVar(
 		&options.dumpStyles, "dump-styles", false,
 		"Dump all configured styles to standard output.",
+	)
+	flag.BoolVar(
+		&options.filterCommentedCode, "fcc", false,
+		"filter commented code, even if disabled in the config",
 	)
 	flag.Parse()
 	if showVersion {
@@ -252,14 +257,14 @@ func parseFiles(
 	out chan sf.SourceFile,
 ) {
 	for _, filename := range names {
-		highlit, failed := highlight(filename, cfg)
-		if len(highlit) == 0 {
+		highlighted, failed := highlight(filename, cfg)
+		if len(highlighted) == 0 {
 			continue
 		}
 		style := cfg.GetStyle(fileExtension(filename))
 		sf := parser.Parse(
 			filename,
-			highlit,
+			highlighted,
 			style,
 			speller,
 			cfg,
@@ -364,6 +369,9 @@ func main() {
 		cfg.DumpStyles()
 		return
 	}
+	cfg.General.FilterCommentedCode =
+		cfg.General.FilterCommentedCode || options.filterCommentedCode
+	cfg.General.Backup = cfg.General.Backup || options.backup
 
 	ignoreList := collectIgnoreLists(paths.ConfigDir, &cfg)
 
@@ -383,7 +391,7 @@ func main() {
 	tui.Text(scr, 0, 0, "Waiting for highlighter", tcell.StyleDefault)
 	scr.Show()
 
-	checker := NewSpellChecker(scr, speller, &cfg, &options)
+	checker := NewSpellChecker(scr, speller, &cfg)
 
 	sourceFiles := make(chan sf.SourceFile)
 	go parseFiles(files, &cfg, speller, &ignoreList, sourceFiles)

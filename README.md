@@ -62,6 +62,14 @@ In addition to those rules the following words are always ignored:
 
 - The words `TODO` and `FIXME` (if case sensitive, only in all uppercase)
 
+## Filtering of commented out code
+
+This can be disable using the `general.filter-commented-code`  option or `-fcc` argument.
+It will try to detec if a comment is commented code and will not check any words inside those comments.
+
+The detection is mostly based on the last character in each line and is especially intended for languages using curly braces and/or semicolons.
+Comments containing other comments (for example a line comment within a block comment) will also heavily influence the detection.
+
 ## Arguments
 
 Synopsis:
@@ -86,6 +94,8 @@ files that have been changed since that run are skipped
 If this option is absent all files with configured comment styles are used.
 
 - `-dump-styles` Dump all configured styles to standard output and exit
+
+- `-fcc` Enable filtering of commented code, event if disable in the configuration
 
 - `-help` Show the option help message
 

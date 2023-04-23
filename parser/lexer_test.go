@@ -135,6 +135,37 @@ func TestOpenString(t *testing.T) {
 	)
 }
 
+func TestEmptyStrings(t *testing.T) {
+	style := cCommentStyle
+	style.Strings = []StringStyle{
+		{Begin: "'\"", End: "'"},
+		{Begin: "\"", End: "\"", Escape: "\\\""},
+		{Begin: "'\"", End: "'"},
+	}
+	Expect(
+		t,
+		"\"\"//",
+		[]Token{
+			newToken(TokenKind.Code, "\"\""),
+			newToken(TokenKind.CommentBegin),
+			newToken(TokenKind.Code, "//"),
+			newToken(TokenKind.EOF),
+		},
+		style,
+	)
+	Expect(
+		t,
+		"'\"'//",
+		[]Token{
+			newToken(TokenKind.Code, "'\"'"),
+			newToken(TokenKind.CommentBegin),
+			newToken(TokenKind.Code, "//"),
+			newToken(TokenKind.EOF),
+		},
+		style,
+	)
+}
+
 func TestNesting(t *testing.T) {
 	style := cCommentStyle
 	style.BlockNesting = true

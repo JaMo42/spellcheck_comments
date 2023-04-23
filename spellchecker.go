@@ -70,7 +70,7 @@ type SpellChecker struct {
 }
 
 func NewSpellChecker(
-	scr tcell.Screen, speller aspell.Speller, cfg *Config, options *Options,
+	scr tcell.Screen, speller aspell.Speller, cfg *Config,
 ) SpellChecker {
 	var layout Layout
 	switch cfg.General.Layout {
@@ -104,7 +104,7 @@ func NewSpellChecker(
 		speller:         speller,
 		ignore:          make(map[string]bool),
 		replacements:    make(map[string]string),
-		doBackup:        cfg.General.Backup || options.backup,
+		doBackup:        cfg.General.Backup,
 		caser:           caser,
 		suggestionCount: cfg.General.Suggestions,
 	}
@@ -122,7 +122,7 @@ func (self *SpellChecker) transform(word string) string {
 // from should already be transformed.
 func (self *SpellChecker) replaceAllInFile(file *FileContext, from string, to string, after tui.SliceIndex) {
 	for _, word := range file.Source().Words() {
-		if word.Index.IsAfter(after) && self.transform(word.Original) == from {
+		if word.Index.IsSameOrAfter(after) && self.transform(word.Original) == from {
 			file.Change(word.Index, to)
 		}
 	}
@@ -168,7 +168,7 @@ func (self *SpellChecker) doUndo(event UndoEventBase) (int, int) {
 			}
 			file := self.files[fileId]
 			for _, word := range file.Source().Words() {
-				if word.Index.IsAfter(start) && self.transform(word.Original) == event.from {
+				if word.Index.IsSameOrAfter(start) && self.transform(word.Original) == event.from {
 					file.RemoveChange(word.Index, word.Original)
 				}
 			}

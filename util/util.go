@@ -35,6 +35,19 @@ func Filter[T any](arr []T, pred func(T) bool) []T {
 	return arr[:last+1]
 }
 
+// StableFilter filters the array like Filter but preserves the order of elements.
+func StableFilter[T any](arr []T, pred func(T) bool) []T {
+	filtered := make([]T, len(arr))
+	i := 0
+	for _, x := range arr {
+		if pred(x) {
+			filtered[i] = x
+			i++
+		}
+	}
+	return filtered[:i]
+}
+
 // Map applies f to each value of arr.
 func Map[T any, U any](arr []T, f func(T) U) []U {
 	result := make([]U, len(arr))

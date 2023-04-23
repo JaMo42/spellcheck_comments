@@ -3,6 +3,7 @@ package parser
 
 import (
 	"regexp"
+	"strings"
 	"unicode"
 
 	"github.com/gdamore/tcell/v2"
@@ -13,6 +14,15 @@ import (
 	"github.com/JaMo42/spellcheck_comments/tui"
 	"github.com/JaMo42/spellcheck_comments/util"
 )
+
+type CommentRange struct {
+	begin tui.SliceIndex
+	end   tui.SliceIndex
+}
+
+func (self *CommentRange) Contains(index tui.SliceIndex) bool {
+	return index.IsSameOrAfter(self.begin) && index.IsBefore(self.end)
+}
 
 // Filter returns true if none of the filters match the word.
 func Filter(s string, filters []*regexp.Regexp) bool {
@@ -49,14 +59,125 @@ func TrimSymbols(s string) (string, string, string) {
 	for first < len(s) && s[first] < 0x80 && unicode.IsPunct(rune(s[first])) {
 		first++
 	}
-	if first == len(s)-1 {
+	last := len(s) - 1
+	if first == last {
 		return s, "", ""
 	}
-	last := len(s) - 1
 	for last >= first && s[last] < 0x80 && unicode.IsPunct(rune(s[last])) {
 		last--
 	}
 	return s[:first], s[first : last+1], s[last+1:]
+}
+
+// endCharMap defines scores for the commentIsCode function.
+var endCharMap = map[byte]float32{
+	';': 1.25,
+	'{': 1.25,
+	'}': 1.25,
+	',': 0.1,
+	'(': 1.0,
+	')': 0.75,
+	'.': -0.5,
+	'<': 1.0,
+	'>': 1.0,
+	'+': 1.0,
+	'-': 1.0,
+	'*': 1.0,
+	'/': 1.0,
+	'=': 1.0,
+}
+
+func isSpace(s string) bool {
+	for _, c := range s {
+		if c != ' ' && c != '\t' {
+			return false
+		}
+	}
+	return true
+}
+
+// commentIsCode checks if the given comment is commented out code.
+func commentIsCode(
+	begin, end tui.SliceIndex,
+	text *tui.TextBuffer,
+	lineBeginTokens []string,
+) bool {
+	target := float32(end.Line()-begin.Line()) * 0.8
+	if end.Line() == begin.Line() {
+		target = 1.0
+	}
+	confidence := float32(0.0)
+	emptyLine := true
+	first := true
+	text.ForEachSliceInRange(begin, end, func(slice *tui.TextSlice, eol bool) {
+		if text := slice.Text(); !isSpace(text) {
+			emptyLine = false
+			// Check for a line comment within a block comment, this is very
+			// suspicious.
+			if !first {
+				first = false
+				for _, token := range lineBeginTokens {
+					if strings.HasPrefix(text, token) {
+						confidence += 5.0
+						return
+					}
+				}
+			}
+		}
+		first = false
+		if eol {
+			if emptyLine {
+				confidence += 1.0
+				return
+			}
+			text := slice.Text()
+			confidence += endCharMap[text[len(text)-1]]
+			emptyLine = true
+		}
+	})
+	// TODO: remove debugging stuff once sure this is ok
+	//if confidence >= target {
+	//	log.Printf("%d~%d: %f/%f\n", begin.Line(), end.Line(), confidence, target)
+	//}
+	return confidence >= target
+}
+
+// FilterCommentedCode attemps to identify commented out code and to remove all
+// matches words inside those comments. This is based on line ending characters
+// and is mainly intended for languages using curly braces and/or semicolons to
+// terminate lines.
+// This also does not work well in continuous lines comments are used instead
+// of block comments as they are all considered separate comments.
+func FilterCommentedCode(
+	words []sf.Word,
+	text *tui.TextBuffer,
+	comments []CommentRange,
+	lineBeginTokens []string,
+) []sf.Word {
+	comments = util.Filter(comments, func(comment CommentRange) bool {
+		return commentIsCode(comment.begin, comment.end, text, lineBeginTokens)
+		//isComment := commentIsCode(comment.begin, comment.end, text, lineBeginTokens)
+		//if isComment {
+		//	log.Printf("filter: %v~%v\n", comment.begin, comment.end)
+		//}
+		//return isComment
+	})
+	if len(comments) == 0 {
+		return words
+	}
+	words = util.StableFilter(words, func(w sf.Word) bool {
+		if w.Index.IsSameOrAfter(comments[0].end) {
+			comments = comments[1:]
+		}
+		for _, comment := range comments {
+			if comment.Contains(w.Index) {
+				//log.Println("remove", w.Original, w.Index)
+				return false
+			}
+		}
+		return true
+	})
+	return words
 }
 
 func Parse(
@@ -73,6 +194,7 @@ func Parse(
 	words := []sf.Word{}
 	inComment := false
 	dimCode := cfg.General.DimCode
+	tb.SetStyle(tcell.StyleDefault.Dim(dimCode))
 	// Compiling these for every file is fine since we always have the overhead
 	// for the first file anyways and the other files are parsed in the background
 	// so a minor slowdown doesn't matter.
@@ -88,7 +210,8 @@ func Parse(
 		}
 		commentColor = commentColor.Dim(false)
 	}
-	tb.SetStyle(tcell.StyleDefault.Dim(dimCode))
+	commentRanges := []CommentRange{}
+	var commentBegin tui.SliceIndex
 
 loop:
 	for {
@@ -120,12 +243,18 @@ loop:
 				tb.SetStyle(commentColor)
 			}
 			inComment = true
+			commentBegin = tb.NextIndex()
 
 		case TokenKind.CommentEnd:
 			if useDefaultCommentColor {
 				tb.SetStyle(tcell.StyleDefault.Dim(dimCode))
 			}
 			inComment = false
+			range_ := CommentRange{commentBegin, tb.NextIndex()}
+			// no clue why this is needed but it seems to always work.
+			range_.begin.OffsetLine(-1)
+			range_.end.OffsetLine(-1)
+			commentRanges = append(commentRanges, range_)
 
 		case TokenKind.Style:
 			style := tui.Ansi2Style(tok.text)
@@ -149,6 +278,9 @@ loop:
 	// although it means there is no visual difference between a file with or
 	// without a final newline but this is not a text editor so who cares.
 	tb.RemoveLastLineIfEmpty()
+	if cfg.General.FilterCommentedCode {
+		words = FilterCommentedCode(words, &tb, commentRanges, commentStyle.Line)
+	}
 	// We need to set the slice pointers after building the text buffer as these
 	// point into slices which may be reallocated during creation.
 	for i := range words {

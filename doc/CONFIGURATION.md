@@ -69,6 +69,7 @@ Key | Description | Default
 `bottom-status` | Whether to show the status bar at the bottom | `false`
 `box-style` | Which flavor of box drawing characters to use, valid values are `"rounded"`, `"sharp"`, `"heavysharp"`, `"double"`, and `"ascii"`. An invalid value defaults to `rounded`. | `"rounded"`
 `dim-code` | Whether to dim the colors of code outside comments | `true`
+`filter-commented-code` | Whether filtering of commented code is enabled. More details about this are in the readme. | `false`
 `filters` | A list of regular expressions, if any of them matches a word it is not checked. They use the RE2 syntax: https://golang.org/s/re2syntax (like Perl or Python). | `[]`
 `highlight-commands` | A list of commands to try for highlighting.These should produce highlighting using ANSI escape codes. In the strings `%FILE%` is replaced with the filename. The first highlighter that does not give an error is used. | `[]`
 `ignore-case` | Whether to ignore the case for the "Ignore all", "Replace all", and ignore lists. This does not affect the spell checking, use the `ignore-case` option in the `aspell-options` section for that. | `true`
