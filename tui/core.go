@@ -121,6 +121,7 @@ func Init(cfg *Config) tcell.Screen {
 	if cfg.General.Mouse {
 		scr.EnableMouse(tcell.MouseMotionEvents)
 	}
+	scr.ShowCursor(-1, -1)
 	Colors.Comment = Ansi2Style(cfg.Colors.Comment)
 	Colors.LineNumber = Ansi2Style(cfg.Colors.LineNumber)
 	Colors.CurrentLineNumber = Ansi2Style(cfg.Colors.CurrentLineNumber)
