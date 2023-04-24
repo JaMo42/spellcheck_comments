@@ -197,7 +197,7 @@ func (self *SpellChecker) Run() bool {
 	for {
 		// The blow code can freely change the word and files ids but should not
 		// change the current file, we only handle all those changes here.
-		if wordId >= wordEnd {
+		if wordId >= wordEnd && fileId == self.currentFile {
 			wordId = 0
 			fileId++
 		}
@@ -289,6 +289,7 @@ func (self *SpellChecker) Run() bool {
 
 		case ActionSkip:
 			addUndoEvent(UndoSkip{})
+			wordId = 0
 			fileId++
 
 		case ActionAbort:
