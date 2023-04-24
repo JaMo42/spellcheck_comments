@@ -13,7 +13,7 @@ However unlike Aspell it only checks the words inside comments in source code fi
 
 Build: `go build`
 
-Install: `go install` (this installs it to `$HOME/go/bin/hello`)
+Install: `go install` (this installs it to `$HOME/go/bin/spellcheck_comments`)
 
 ### Dependencies
 
