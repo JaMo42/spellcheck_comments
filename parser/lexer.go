@@ -152,6 +152,7 @@ func buildDfa(style CommentStyle) Dfa {
 		}
 		state.AddTransition(ss.End, inCodeState.Id())
 		state.AddTransition("\x1b", inEscapeState.Id())
+		state.AddTransition("\n", state.Id())
 		state.AddTransition(string(eofRune), eofState.Id())
 	}
 	return dfa
@@ -316,6 +317,8 @@ func (self *Lexer) getNextTokens() {
 				self.createToken(TokenKind.Code).Then(addToken)
 
 			case lexTransition{lexStateInCode, lexStateInCode}:
+				fallthrough
+			case lexTransition{lexStateInString, lexStateInString}:
 				fallthrough
 			case lexTransition{lexStateInComment, lexStateInComment}:
 				// Caused by a newline.
