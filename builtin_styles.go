@@ -51,6 +51,7 @@ var builtinStyles = []styleData{
 				// overlap.
 				{Begin: "'\"", End: "'"},
 				{Begin: "\"", End: "\"", Escape: "\\\""},
+                {Begin: "r#\"", End: "\"#"},
 			},
 		},
 	},
