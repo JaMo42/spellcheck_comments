@@ -439,6 +439,7 @@ func main() {
 
 	files := getFiles(args, fileFilter(&cfg, &options))
 	if len(files) == 0 {
+		fmt.Println("No files")
 		return
 	}
 
@@ -467,8 +468,9 @@ func main() {
 		}
 	}
 	checker.Finish()
+
+	scr.Suspend()
 	if allOk {
-		scr.Suspend()
 		fmt.Println("All files OK")
 	} else if len(options.saveIgnoreList.s) != 0 {
 		additions := make([]string, len(checker.ignore))
@@ -477,7 +479,9 @@ func main() {
 			additions = append(additions, word)
 		}
 		if err := appendFileLines(options.saveIgnoreList.s, additions); err != nil {
-			log.Printf("Writing ignore list failed: %s", err)
+			fmt.Printf("Writing ignore list failed: %s", err)
+		} else {
+			fmt.Printf("Saved ignore list to %s", options.saveIgnoreList.s)
 		}
 	}
 }
