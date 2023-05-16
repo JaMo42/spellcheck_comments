@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"flag"
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"os/exec"
@@ -26,6 +27,30 @@ const (
 	appVersion = "0.3.2"
 )
 
+// OptionalStringArg is a string option with an optional value (--opt or --opt=value).
+type OptionalStringArg struct {
+	s string
+}
+
+func (self *OptionalStringArg) String() string {
+	return self.s
+}
+
+func (self *OptionalStringArg) Set(s string) error {
+	// We get `true` if no value if specified because of IsBoolFlag.
+	if s == "true" {
+		// hardcoded default because we only use this once
+		self.s = ".spellcheck_comments_ignorelist"
+	} else {
+		self.s = s
+	}
+	return nil
+}
+
+func (self *OptionalStringArg) IsBoolFlag() bool {
+	return true
+}
+
 type Options struct {
 	backup              bool
 	applyBackup         bool
@@ -33,6 +58,7 @@ type Options struct {
 	globs               []string
 	dumpStyles          bool
 	filterCommentedCode bool
+	saveIgnoreList      OptionalStringArg
 }
 
 func parseArgs() (Options, []string) {
@@ -71,6 +97,10 @@ func parseArgs() (Options, []string) {
 	flag.BoolVar(
 		&options.filterCommentedCode, "fcc", false,
 		"filter commented code, even if disabled in the config",
+	)
+	flag.Var(
+		&options.saveIgnoreList, "save-ignore",
+		"append words added to the ignore list to a local ignore list file. Optionally specify the name of that file.",
 	)
 	flag.Parse()
 	if showVersion {
@@ -347,6 +377,38 @@ func collectIgnoreLists(configPath Optional[string], cfg *Config) IgnoreList {
 	return list
 }
 
+// appendFileLines appends a list of lines to the end of a file.
+func appendFileLines(filename string, lines []string) error {
+	f, err := os.OpenFile(filename, os.O_RDWR|os.O_CREATE, 0600)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	// Add a newline to the end of the file if there was none
+	f.Seek(-1, io.SeekEnd)
+	last := make([]byte, 1)
+	_, err = f.Read(last)
+	f.Seek(0, io.SeekEnd)
+	if err != io.EOF && last[0] != '\n' {
+		_, err = f.Write([]byte{'\n'})
+		if err != nil {
+			return err
+		}
+	}
+	// Write lines
+	for _, line := range lines {
+		_, err = f.WriteString(line)
+		if err != nil {
+			return err
+		}
+		_, err = f.Write([]byte{'\n'})
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func main() {
 	log.SetFlags(0)
 	options, args := parseArgs()
@@ -408,5 +470,14 @@ func main() {
 	if allOk {
 		scr.Suspend()
 		fmt.Println("All files OK")
+	} else if len(options.saveIgnoreList.s) != 0 {
+		additions := make([]string, len(checker.ignore))
+		additions = additions[:0]
+		for word := range checker.ignore {
+			additions = append(additions, word)
+		}
+		if err := appendFileLines(options.saveIgnoreList.s, additions); err != nil {
+			log.Printf("Writing ignore list failed: %s", err)
+		}
 	}
 }

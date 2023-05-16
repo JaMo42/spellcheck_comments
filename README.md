@@ -95,7 +95,10 @@ If this option is absent all files with configured comment styles are used.
 
 - `-dump-styles` Dump all configured styles to standard output and exit
 
-- `-fcc` Enable filtering of commented code, event if disable in the configuration
+- `-fcc` Enable filtering of commented code, even if disabled in the configuration
+
+- `-save-ignore[=FILE]` Save words ignored using the `Ignore all` action to a ignore list file.
+By default this is `.spellcheck_comments_ignorelist` but a different file name can be optionally provided (note that the argument has to be given with the `=`).
 
 - `-help` Show the option help message
 
